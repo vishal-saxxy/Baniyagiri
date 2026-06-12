@@ -4,15 +4,23 @@ import { useBani, computeSplits } from "@/lib/baniyagiri-store";
 import { computeBalances, simplifyDebts } from "@/lib/simplify-debts";
 import type { Participant, SplitMethod } from "@/lib/baniyagiri-types";
 import { toast } from "sonner";
+import {
+  LayoutGrid, Users, CalendarRange, Receipt, ArrowRightLeft,
+  Plus, X, Sparkles, ChevronRight, TrendingUp, Wallet, Check,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: BaniApp });
 
-function WarningBanner() {
+/* ============================================================
+   Shell
+============================================================ */
+
+function WarningPill() {
   return (
-    <div className="sticky top-0 z-50 w-full border-b border-amber-500/30 bg-amber-500/10 backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-3 py-2 text-center text-[11px] sm:text-xs leading-snug text-amber-200">
-        ⚠️ <span className="font-semibold">Baniyagiri Mode Active:</span> All data exists only in this browser tab.
-        Refreshing or closing the page will permanently erase all expenses, balances, groups, and history.
+    <div className="pointer-events-none sticky top-0 z-40 flex justify-center px-3 pt-3">
+      <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50/85 px-3 py-1.5 text-[11px] font-medium text-amber-900 backdrop-blur-xl shadow-sm">
+        <span className="grid h-4 w-4 place-items-center rounded-full bg-amber-400/90 text-[9px] text-white">!</span>
+        Session-only — data clears when this tab closes
       </div>
     </div>
   );
@@ -20,15 +28,15 @@ function WarningBanner() {
 
 function Footer() {
   return (
-    <footer className="px-4 pb-6 pt-10 text-center text-[11px] text-muted-foreground">
-      made with love, by{" "}
+    <footer className="px-4 pb-8 pt-10 text-center text-[12px] text-muted-foreground">
+      Made with love by{" "}
       <a
-        className="underline underline-offset-2 hover:text-foreground"
+        className="font-semibold text-foreground underline-offset-4 hover:underline"
         href="https://www.linkedin.com/in/vishal-kumar-gupta-b5a664252/"
         target="_blank"
         rel="noreferrer"
       >
-        vishal
+        Vishal
       </a>
     </footer>
   );
@@ -38,67 +46,125 @@ function BaniApp() {
   const stage = useBani((s) => s.stage);
   return (
     <div className="flex min-h-screen flex-col">
-      <WarningBanner />
+      {stage !== "landing" && <WarningPill />}
       <main className="flex-1">
         {stage === "landing" && <Landing />}
         {stage === "workspace-setup" && <WorkspaceSetup />}
         {stage === "dashboard" && <Dashboard />}
       </main>
-      <Footer />
+      {stage !== "dashboard" && <Footer />}
     </div>
   );
 }
 
-/* ---------------- Landing ---------------- */
+/* ============================================================
+   Landing
+============================================================ */
+
+function Logo({ size = 36 }: { size?: number }) {
+  return (
+    <div
+      className="grid place-items-center rounded-2xl bg-gradient-to-br from-neutral-900 to-neutral-700 text-white shadow-lg"
+      style={{ width: size, height: size }}
+    >
+      <span className="font-black tracking-tight" style={{ fontSize: size * 0.5 }}>B</span>
+    </div>
+  );
+}
 
 function Landing() {
   const [name, setName] = useState("");
   const setUsername = useBani((s) => s.setUsername);
+
+  const features = [
+    { title: "Split expenses", desc: "Equal, percentage, shares, adjustments.", tile: "tile-sky", icon: <Receipt className="h-5 w-5" /> },
+    { title: "Simplify debts", desc: "Fewest possible payments, instantly.", tile: "tile-mint", icon: <ArrowRightLeft className="h-5 w-5" /> },
+    { title: "Trips & occasions", desc: "Group expenses by event.", tile: "tile-peach", icon: <CalendarRange className="h-5 w-5" /> },
+    { title: "Live balances", desc: "Who owes whom, in real time.", tile: "tile-lavender", icon: <Wallet className="h-5 w-5" /> },
+    { title: "Instant settlements", desc: "Beautiful payment flows.", tile: "tile-rose", icon: <Check className="h-5 w-5" /> },
+    { title: "Zero friction", desc: "No signup. No backend. No tracking.", tile: "tile-sand", icon: <Sparkles className="h-5 w-5" /> },
+  ];
+
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center px-5 pb-10 pt-16 sm:pt-24">
-      <div className="mb-8 flex items-center gap-2">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground font-black">B</div>
-        <span className="text-sm font-semibold tracking-widest text-muted-foreground">BANIYAGIRI</span>
-      </div>
-      <h1 className="text-center text-4xl font-extrabold tracking-tight sm:text-5xl">
-        Split expenses,{" "}
-        <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">zero friction.</span>
-      </h1>
-      <p className="mt-3 text-center text-sm text-muted-foreground">
-        The Zero-Friction Expense Splitter. No signup. No backend. Just you, your friends, and clean math.
-      </p>
+    <div className="mx-auto w-full max-w-5xl px-5 pb-12 pt-6">
+      {/* Top nav */}
+      <nav className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Logo size={34} />
+          <span className="text-[15px] font-bold tracking-tight">Baniyagiri</span>
+        </div>
+        <a
+          href="#enter"
+          className="bani-btn bani-btn-ghost text-xs sm:text-sm"
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById("enter")?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          Enter workspace
+        </a>
+      </nav>
 
-      <form
-        className="mt-8 w-full bani-card p-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!name.trim()) return toast.error("Enter a username to continue");
-          setUsername(name);
-        }}
-      >
-        <label className="text-xs font-medium text-muted-foreground">Enter Username</label>
-        <input
-          autoFocus
-          className="bani-input mt-2"
-          placeholder="e.g. Rahul"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button type="submit" className="bani-btn bani-btn-primary mt-4 w-full">
-          Enter Baniyagiri →
-        </button>
-      </form>
+      {/* Hero */}
+      <section className="mt-16 sm:mt-24 text-center">
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/60 px-3 py-1 text-[11px] font-medium text-neutral-600 backdrop-blur">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          No signup · No backend · Browser-only
+        </div>
+        <h1 className="mx-auto mt-6 max-w-3xl text-5xl font-black tracking-tight sm:text-7xl leading-[0.95]">
+          Baniyagiri
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-lg font-medium text-neutral-700 sm:text-xl">
+          The zero-friction expense splitter.
+        </p>
+        <p className="mx-auto mt-3 max-w-md text-sm text-neutral-500">
+          No signups. No logins. No tracking. Split expenses instantly with friends.
+        </p>
 
-      <div className="mt-10 grid w-full grid-cols-3 gap-3 text-center text-[11px] text-muted-foreground">
-        <div className="bani-card p-3"><div className="text-base font-bold text-foreground">0</div>signups</div>
-        <div className="bani-card p-3"><div className="text-base font-bold text-foreground">5</div>split methods</div>
-        <div className="bani-card p-3"><div className="text-base font-bold text-foreground">1-tap</div>simplify</div>
-      </div>
+        <form
+          id="enter"
+          className="mx-auto mt-10 flex max-w-md flex-col gap-3 sm:flex-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!name.trim()) return toast.error("Enter a name to continue");
+            setUsername(name);
+          }}
+        >
+          <input
+            className="bani-input flex-1 text-center sm:text-left"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button type="submit" className="bani-btn bani-btn-primary whitespace-nowrap">
+            Enter Baniyagiri →
+          </button>
+        </form>
+      </section>
+
+      {/* Feature cards */}
+      <section className="mt-20 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {features.map((f, i) => (
+          <div
+            key={f.title}
+            className="glass animate-fade-soft p-5"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className={`grid h-10 w-10 place-items-center rounded-xl ${f.tile} text-neutral-800`}>
+              {f.icon}
+            </div>
+            <h3 className="mt-4 text-[17px] font-semibold tracking-tight">{f.title}</h3>
+            <p className="mt-1 text-sm text-neutral-600">{f.desc}</p>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }
 
-/* ---------------- Workspace Setup ---------------- */
+/* ============================================================
+   Workspace Setup
+============================================================ */
 
 function WorkspaceSetup() {
   const [name, setName] = useState("");
@@ -107,13 +173,19 @@ function WorkspaceSetup() {
   const loadDemo = useBani((s) => s.loadDemo);
   const examples = ["Goa Trip", "Flat Expenses", "Office Party", "College Tour"];
   return (
-    <div className="mx-auto max-w-md px-5 pb-10 pt-12 sm:pt-20">
-      <p className="text-xs text-muted-foreground">Hey {username || "there"} 👋</p>
-      <h2 className="mt-1 text-2xl font-bold sm:text-3xl">Name your workspace</h2>
-      <p className="mt-1 text-sm text-muted-foreground">A space for one set of shared expenses.</p>
+    <div className="mx-auto max-w-md px-5 pb-10 pt-10 sm:pt-16">
+      <div className="mb-6 flex items-center gap-2.5">
+        <Logo size={32} />
+        <span className="text-sm font-bold tracking-tight">Baniyagiri</span>
+      </div>
+      <p className="text-sm text-neutral-500">Hey {username || "there"} 👋</p>
+      <h2 className="mt-2 text-[34px] font-black tracking-tight leading-tight">
+        Name your workspace
+      </h2>
+      <p className="mt-2 text-[15px] text-neutral-600">A space for one set of shared expenses.</p>
 
       <form
-        className="mt-6 bani-card p-5"
+        className="glass mt-7 p-5"
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return toast.error("Enter a workspace name");
@@ -133,14 +205,14 @@ function WorkspaceSetup() {
               type="button"
               key={ex}
               onClick={() => setName(ex)}
-              className="rounded-full border border-border bg-muted/60 px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
+              className="rounded-full border border-neutral-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-white"
             >
               {ex}
             </button>
           ))}
         </div>
         <button type="submit" className="bani-btn bani-btn-primary mt-5 w-full">
-          Create Workspace
+          Create workspace
         </button>
         <button
           type="button"
@@ -148,7 +220,7 @@ function WorkspaceSetup() {
             loadDemo();
             setWorkspace("Goa Trip (Demo)");
           }}
-          className="mt-2 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+          className="mt-3 w-full text-center text-xs font-medium text-neutral-500 hover:text-neutral-900"
         >
           or load sample demo data
         </button>
@@ -157,13 +229,15 @@ function WorkspaceSetup() {
   );
 }
 
-/* ---------------- Dashboard ---------------- */
+/* ============================================================
+   Dashboard
+============================================================ */
 
-type Tab = "feed" | "balances" | "settlement";
+type Tab = "home" | "people" | "occasions" | "expenses" | "settle";
 
 function Dashboard() {
   const { workspaceName, participants, occasions, expenses, clearSheet } = useBani();
-  const [tab, setTab] = useState<Tab>("feed");
+  const [tab, setTab] = useState<Tab>("home");
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddOccasion, setShowAddOccasion] = useState(false);
@@ -175,131 +249,75 @@ function Dashboard() {
   );
   const settlements = useMemo(() => simplifyDebts(balances), [balances]);
   const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? "—";
+  const totalSpend = expenses.reduce((a, b) => a + b.amount, 0);
+  const outstanding = Object.values(balances).reduce((a, b) => a + Math.max(0, b), 0);
 
   return (
-    <div className="mx-auto max-w-5xl px-3 sm:px-6 pb-24 pt-4">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-3 sm:px-6">
       {/* Header */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pt-2">
         <div className="min-w-0">
-          <p className="truncate text-[11px] uppercase tracking-widest text-muted-foreground">Workspace</p>
-          <h1 className="truncate text-xl font-extrabold sm:text-2xl">{workspaceName}</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Workspace
+          </p>
+          <h1 className="truncate text-[26px] font-black tracking-tight sm:text-[30px]">
+            {workspaceName}
+          </h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            className="bani-btn bani-btn-ghost text-xs sm:text-sm"
-            onClick={() => {
+        <button
+          className="bani-btn bani-btn-ghost shrink-0 px-3 py-2 text-xs"
+          onClick={() => {
+            if (confirm("Clear the entire sheet? Everything will be erased.")) {
+              clearSheet();
+              toast.success("Sheet cleared");
+            }
+          }}
+        >
+          Reset
+        </button>
+      </header>
+
+      <div className="mt-6">
+        {tab === "home" && (
+          <HomeView
+            participants={participants}
+            occasions={occasions}
+            expenses={expenses}
+            totalSpend={totalSpend}
+            outstanding={outstanding}
+            balances={balances}
+            nameOf={nameOf}
+            onSimplify={() => {
               if (participants.length < 2) return toast.error("Add at least 2 people");
               setShowSettlement(true);
             }}
-          >
-            <span className="hidden sm:inline">Simplify</span> Debts
-          </button>
-          <button
-            className="bani-btn bani-btn-danger text-xs sm:text-sm"
-            onClick={() => {
-              if (confirm("Clear the entire sheet? Everything will be erased.")) {
-                clearSheet();
-                toast.success("Sheet cleared");
-              }
+            goTab={setTab}
+          />
+        )}
+        {tab === "people" && (
+          <PeopleView
+            participants={participants}
+            balances={balances}
+            onAdd={() => setShowAddPerson(true)}
+          />
+        )}
+        {tab === "occasions" && (
+          <OccasionsView
+            onAdd={() => {
+              if (participants.length === 0) return toast.error("Add a person first");
+              setShowAddOccasion(true);
             }}
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-        <Stat label="People" value={participants.length} />
-        <Stat label="Occasions" value={occasions.length} />
-        <Stat
-          label="Total"
-          value={"₹" + expenses.reduce((a, b) => a + b.amount, 0).toLocaleString("en-IN")}
-        />
-      </div>
-
-      {/* Sidebar + main on desktop, stacked on mobile */}
-      <div className="mt-5 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="space-y-3">
-          <SidebarSection
-            title="Participants"
-            count={participants.length}
-            action={{ label: "+ Add", onClick: () => setShowAddPerson(true) }}
-          >
-            {participants.length === 0 ? (
-              <Empty hint="No one yet" />
-            ) : (
-              <ul className="space-y-1">
-                {participants.map((p) => (
-                  <ParticipantRow key={p.id} p={p} balance={balances[p.id] ?? 0} />
-                ))}
-              </ul>
-            )}
-          </SidebarSection>
-
-          <SidebarSection
-            title="Occasions"
-            count={occasions.length}
-            action={{
-              label: "+ Add",
-              onClick: () => {
-                if (participants.length === 0) return toast.error("Add a person first");
-                setShowAddOccasion(true);
-              },
-            }}
-          >
-            {occasions.length === 0 ? (
-              <Empty hint="No occasions yet" />
-            ) : (
-              <ul className="space-y-1">
-                {occasions.map((o) => (
-                  <li key={o.id} className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2 text-sm">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{o.name}</div>
-                      <div className="truncate text-[11px] text-muted-foreground">
-                        {o.participantIds.length} people
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => useBani.getState().removeOccasion(o.id)}
-                      className="text-xs text-muted-foreground hover:text-danger"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SidebarSection>
-        </aside>
-
-        <section className="min-w-0">
-          {/* Tabs */}
-          <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
-            {(["feed", "balances", "settlement"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={
-                  "flex-1 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold capitalize sm:text-sm " +
-                  (tab === t ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                {t === "feed" ? "Expense Feed" : t === "balances" ? "Balances" : "Settlement"}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4">
-            {tab === "feed" && (
-              <FeedView nameOf={nameOf} occasionName={(id) => occasions.find((o) => o.id === id)?.name ?? "—"} />
-            )}
-            {tab === "balances" && <BalancesView balances={balances} nameOf={nameOf} />}
-            {tab === "settlement" && (
-              <SettlementView settlements={settlements} nameOf={nameOf} />
-            )}
-          </div>
-        </section>
+          />
+        )}
+        {tab === "expenses" && (
+          <ExpensesView
+            nameOf={nameOf}
+            occasionName={(id) => occasions.find((o) => o.id === id)?.name ?? "—"}
+          />
+        )}
+        {tab === "settle" && (
+          <SettleView settlements={settlements} nameOf={nameOf} balances={balances} />
+        )}
       </div>
 
       {/* FAB */}
@@ -309,17 +327,20 @@ function Dashboard() {
           if (occasions.length < 1) return toast.error("Create an occasion first");
           setShowAddExpense(true);
         }}
-        className="fixed bottom-5 right-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-2xl font-bold text-primary-foreground shadow-2xl sm:bottom-8 sm:right-8"
+        className="fixed bottom-24 right-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-neutral-900 text-white shadow-[0_16px_40px_-12px_rgba(0,0,0,0.45)] transition active:scale-95 sm:bottom-28 sm:right-8"
         aria-label="Add expense"
       >
-        +
+        <Plus className="h-6 w-6" strokeWidth={2.5} />
       </button>
 
-      {showAddPerson && <AddPersonModal onClose={() => setShowAddPerson(false)} />}
-      {showAddOccasion && <AddOccasionModal onClose={() => setShowAddOccasion(false)} />}
-      {showAddExpense && <AddExpenseModal onClose={() => setShowAddExpense(false)} />}
+      {/* Bottom Nav */}
+      <BottomNav tab={tab} setTab={setTab} />
+
+      {showAddPerson && <AddPersonSheet onClose={() => setShowAddPerson(false)} />}
+      {showAddOccasion && <AddOccasionSheet onClose={() => setShowAddOccasion(false)} />}
+      {showAddExpense && <AddExpenseSheet onClose={() => setShowAddExpense(false)} />}
       {showSettlement && (
-        <SettlementModal
+        <SettlementSheet
           settlements={settlements}
           nameOf={nameOf}
           onClose={() => setShowSettlement(false)}
@@ -329,173 +350,595 @@ function Dashboard() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+/* ---------------- Bottom Navigation ---------------- */
+
+function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  const items: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: "home", label: "Home", icon: <LayoutGrid className="h-5 w-5" /> },
+    { id: "people", label: "People", icon: <Users className="h-5 w-5" /> },
+    { id: "occasions", label: "Trips", icon: <CalendarRange className="h-5 w-5" /> },
+    { id: "expenses", label: "Expenses", icon: <Receipt className="h-5 w-5" /> },
+    { id: "settle", label: "Settle", icon: <ArrowRightLeft className="h-5 w-5" /> },
+  ];
   return (
-    <div className="bani-card px-3 py-3 sm:px-4">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-base font-bold sm:text-lg">{value}</div>
-    </div>
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-3 pt-2 pointer-events-none">
+      <div className="tabbar pointer-events-auto flex w-full max-w-md items-center justify-between rounded-[28px] px-2 py-1.5">
+        {items.map((it) => {
+          const active = tab === it.id;
+          return (
+            <button
+              key={it.id}
+              onClick={() => setTab(it.id)}
+              className={
+                "flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-1.5 transition " +
+                (active ? "bg-neutral-900 text-white" : "text-neutral-500 hover:text-neutral-900")
+              }
+            >
+              {it.icon}
+              <span className="text-[10px] font-semibold tracking-tight">{it.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
-function SidebarSection({
-  title,
-  count,
-  action,
-  children,
+/* ---------------- Home (Widgets) ---------------- */
+
+function HomeView({
+  participants, occasions, expenses, totalSpend, outstanding,
+  balances, nameOf, onSimplify, goTab,
 }: {
-  title: string;
-  count: number;
-  action: { label: string; onClick: () => void };
-  children: React.ReactNode;
+  participants: Participant[];
+  occasions: { id: string; name: string; participantIds: string[] }[];
+  expenses: { id: string; amount: number; createdAt: number; description: string; paidBy: string; occasionId: string }[];
+  totalSpend: number;
+  outstanding: number;
+  balances: Record<string, number>;
+  nameOf: (id: string) => string;
+  onSimplify: () => void;
+  goTab: (t: Tab) => void;
 }) {
+  // ring values
+  const settledPct = (() => {
+    const totals = Object.values(balances).reduce((a, b) => a + Math.abs(b), 0);
+    if (totals < 0.01) return 1;
+    // After simplification, "settled" = 0 outstanding. Use ratio of settled vs initial outstanding (simplified).
+    return Math.max(0, 1 - Math.min(1, outstanding / Math.max(1, totalSpend)));
+  })();
+
+  const top = [...participants]
+    .map((p) => ({ p, b: balances[p.id] ?? 0 }))
+    .sort((a, b) => Math.abs(b.b) - Math.abs(a.b))
+    .slice(0, 3);
+
+  const recent = expenses.slice(0, 4);
+
   return (
-    <div className="bani-card p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          {title} <span className="text-foreground/60">({count})</span>
-        </h3>
-        <button onClick={action.onClick} className="text-xs font-semibold text-primary hover:underline">
-          {action.label}
+    <div className="space-y-4 animate-fade-soft">
+      {/* Hero balance widget */}
+      <div className="glass-strong p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+              Total tracked
+            </p>
+            <p className="mt-1 text-[40px] font-black leading-none tracking-tight">
+              ₹{totalSpend.toLocaleString("en-IN")}
+            </p>
+            <p className="mt-2 text-[13px] text-neutral-600">
+              ₹{outstanding.toFixed(2)} outstanding across {participants.length} people
+            </p>
+          </div>
+          <FitnessRings
+            size={104}
+            rings={[
+              { value: settledPct, color: "#22c55e" },
+              { value: Math.min(1, expenses.length / 10), color: "#3b82f6" },
+              { value: Math.min(1, occasions.length / 5), color: "#ef4444" },
+            ]}
+          />
+        </div>
+        <button
+          onClick={onSimplify}
+          className="bani-btn bani-btn-primary mt-5 w-full"
+        >
+          <Sparkles className="h-4 w-4" /> Simplify debts
         </button>
       </div>
-      {children}
+
+      {/* Stat tiles */}
+      <div className="grid grid-cols-2 gap-3">
+        <Tile onClick={() => goTab("people")} accent="tile-sky" label="People" value={participants.length} icon={<Users className="h-4 w-4" />} />
+        <Tile onClick={() => goTab("occasions")} accent="tile-peach" label="Occasions" value={occasions.length} icon={<CalendarRange className="h-4 w-4" />} />
+        <Tile onClick={() => goTab("expenses")} accent="tile-lavender" label="Expenses" value={expenses.length} icon={<Receipt className="h-4 w-4" />} />
+        <Tile onClick={() => goTab("settle")} accent="tile-mint" label="Settlements" value={Math.max(0, top.filter(t => Math.abs(t.b) > 0.005).length)} icon={<ArrowRightLeft className="h-4 w-4" />} />
+      </div>
+
+      {/* Spending trend (mini line) */}
+      {expenses.length > 1 && (
+        <div className="glass p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Spending trend</p>
+              <p className="mt-1 text-xl font-bold tracking-tight">₹{totalSpend.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+              <TrendingUp className="h-3 w-3" />
+              {expenses.length} txns
+            </div>
+          </div>
+          <div className="mt-3">
+            <SparkLine values={[...expenses].reverse().map((e) => e.amount)} />
+          </div>
+        </div>
+      )}
+
+      {/* Top balances */}
+      {top.length > 0 && (
+        <div className="glass p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[15px] font-semibold tracking-tight">Top balances</h3>
+            <button onClick={() => goTab("people")} className="text-xs font-semibold text-neutral-500 hover:text-neutral-900">
+              View all <ChevronRight className="inline h-3 w-3" />
+            </button>
+          </div>
+          <ul className="space-y-2">
+            {top.map(({ p, b }) => <BalanceRow key={p.id} name={p.name} balance={b} />)}
+          </ul>
+        </div>
+      )}
+
+      {/* Recent activity */}
+      {recent.length > 0 && (
+        <div className="glass p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[15px] font-semibold tracking-tight">Recent activity</h3>
+            <button onClick={() => goTab("expenses")} className="text-xs font-semibold text-neutral-500 hover:text-neutral-900">
+              View all <ChevronRight className="inline h-3 w-3" />
+            </button>
+          </div>
+          <ul className="space-y-2.5">
+            {recent.map((e) => (
+              <li key={e.id} className="flex items-center justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-100">
+                    <Receipt className="h-4 w-4 text-neutral-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{e.description}</p>
+                    <p className="truncate text-[11px] text-neutral-500">{nameOf(e.paidBy)} paid</p>
+                  </div>
+                </div>
+                <div className="text-sm font-bold">₹{e.amount.toLocaleString("en-IN")}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {participants.length === 0 && (
+        <EmptyState
+          icon={<Users className="h-6 w-6" />}
+          title="Add your first person"
+          desc="Add people in your group to start splitting."
+          cta="Go to People"
+          onCta={() => goTab("people")}
+        />
+      )}
     </div>
   );
 }
 
-function Empty({ hint }: { hint: string }) {
-  return <div className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">{hint}</div>;
+function Tile({ label, value, icon, accent, onClick }: { label: string; value: number; icon: React.ReactNode; accent: string; onClick?: () => void }) {
+  return (
+    <button onClick={onClick} className="glass relative overflow-hidden p-4 text-left transition active:scale-[0.98]">
+      <div className="flex items-center justify-between">
+        <div className={`grid h-9 w-9 place-items-center rounded-xl ${accent} text-neutral-800`}>
+          {icon}
+        </div>
+        <ChevronRight className="h-4 w-4 text-neutral-400" />
+      </div>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">{label}</p>
+      <p className="mt-0.5 text-2xl font-black tracking-tight">{value}</p>
+    </button>
+  );
 }
 
-function ParticipantRow({ p, balance }: { p: Participant; balance: number }) {
-  const color = balance > 0.005 ? "text-emerald-400" : balance < -0.005 ? "text-rose-400" : "text-muted-foreground";
-  const label = balance > 0.005 ? `+₹${balance.toFixed(2)}` : balance < -0.005 ? `-₹${Math.abs(balance).toFixed(2)}` : "settled";
+function BalanceRow({ name, balance }: { name: string; balance: number }) {
+  const positive = balance > 0.005;
+  const negative = balance < -0.005;
   return (
-    <li className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2 text-sm">
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/70 to-accent/70 text-[11px] font-bold text-primary-foreground">
-          {p.name.slice(0, 1).toUpperCase()}
+    <li className="flex items-center justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar name={name} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{name}</p>
+          <p className="text-[11px] text-neutral-500">
+            {positive ? "gets back" : negative ? "owes" : "all settled"}
+          </p>
         </div>
-        <span className="truncate font-medium">{p.name}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className={"text-xs font-semibold " + color}>{label}</span>
-        <button
-          onClick={() => useBani.getState().removeParticipant(p.id)}
-          className="text-xs text-muted-foreground hover:text-danger"
-        >
-          ✕
-        </button>
+      <div className={
+        "text-sm font-bold " +
+        (positive ? "text-emerald-600" : negative ? "text-rose-600" : "text-neutral-400")
+      }>
+        {positive && "+"}
+        ₹{Math.abs(balance).toFixed(2)}
       </div>
     </li>
   );
 }
 
-/* ---------------- Views ---------------- */
+function Avatar({ name }: { name: string }) {
+  const palettes = [
+    "from-sky-200 to-sky-400",
+    "from-rose-200 to-rose-400",
+    "from-emerald-200 to-emerald-400",
+    "from-amber-200 to-amber-400",
+    "from-violet-200 to-violet-400",
+    "from-cyan-200 to-cyan-400",
+  ];
+  const idx = name.charCodeAt(0) % palettes.length;
+  return (
+    <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br ${palettes[idx]} text-sm font-bold text-neutral-900 shadow-inner`}>
+      {name.slice(0, 1).toUpperCase()}
+    </div>
+  );
+}
 
-function FeedView({ nameOf, occasionName }: { nameOf: (id: string) => string; occasionName: (id: string) => string }) {
+/* ---------------- Fitness Rings ---------------- */
+
+function FitnessRings({ size = 96, rings }: { size?: number; rings: { value: number; color: string }[] }) {
+  const stroke = Math.max(6, size * 0.085);
+  const gap = stroke * 0.4;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+      {rings.map((r, i) => {
+        const radius = size / 2 - stroke / 2 - i * (stroke + gap);
+        if (radius <= 0) return null;
+        const C = 2 * Math.PI * radius;
+        const offset = C * (1 - Math.min(1, Math.max(0, r.value)));
+        return (
+          <g key={i} transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+            <circle
+              cx={size / 2} cy={size / 2} r={radius}
+              fill="none" stroke={r.color} opacity={0.18} strokeWidth={stroke}
+            />
+            <circle
+              cx={size / 2} cy={size / 2} r={radius}
+              fill="none" stroke={r.color} strokeWidth={stroke} strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={offset}
+              style={{ transition: "stroke-dashoffset 700ms cubic-bezier(0.22, 1, 0.36, 1)" }}
+            />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ---------------- Sparkline ---------------- */
+
+function SparkLine({ values }: { values: number[] }) {
+  const w = 320, h = 70, pad = 6;
+  if (values.length < 2) return null;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return [x, y] as const;
+  });
+  const path = pts.reduce((acc, [x, y], i) => {
+    if (i === 0) return `M ${x} ${y}`;
+    const [px, py] = pts[i - 1];
+    const cx = (px + x) / 2;
+    return `${acc} Q ${px} ${py} ${cx} ${(py + y) / 2} T ${x} ${y}`;
+  }, "");
+  const area = `${path} L ${pts[pts.length - 1][0]} ${h} L ${pts[0][0]} ${h} Z`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none" style={{ height: 70 }}>
+      <defs>
+        <linearGradient id="spark-grad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#spark-grad)" />
+      <path d={path} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ---------------- People View ---------------- */
+
+function PeopleView({ participants, balances, onAdd }: { participants: Participant[]; balances: Record<string, number>; onAdd: () => void }) {
+  const totals = Object.values(balances).reduce((a, b) => a + Math.abs(b), 0);
+  return (
+    <div className="animate-fade-soft space-y-4">
+      <SectionHeader title="People" subtitle={`${participants.length} in this workspace`} action={{ label: "Add", onClick: onAdd }} />
+      {participants.length === 0 ? (
+        <EmptyState
+          icon={<Users className="h-6 w-6" />}
+          title="No one here yet"
+          desc="Add people to start splitting expenses."
+          cta="Add person"
+          onCta={onAdd}
+        />
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {participants.map((p) => {
+            const b = balances[p.id] ?? 0;
+            const positive = b > 0.005, negative = b < -0.005;
+            const share = totals > 0 ? Math.abs(b) / totals : 0;
+            return (
+              <li key={p.id} className="glass relative overflow-hidden p-5">
+                <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-white/0 to-white/40 blur-xl" />
+                <div className="flex items-start justify-between">
+                  <Avatar name={p.name} />
+                  <button
+                    onClick={() => useBani.getState().removeParticipant(p.id)}
+                    className="text-xs text-neutral-400 hover:text-rose-600"
+                    aria-label="Remove"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <h4 className="mt-4 text-lg font-bold tracking-tight">{p.name}</h4>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                  {positive ? "Gets back" : negative ? "Owes" : "Settled"}
+                </p>
+                <p className={
+                  "mt-1 text-2xl font-black tracking-tight " +
+                  (positive ? "text-emerald-600" : negative ? "text-rose-600" : "text-neutral-400")
+                }>
+                  {positive && "+"}
+                  ₹{Math.abs(b).toFixed(2)}
+                </p>
+                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+                  <div
+                    className={
+                      "h-full rounded-full " +
+                      (positive ? "bg-emerald-500" : negative ? "bg-rose-500" : "bg-neutral-300")
+                    }
+                    style={{ width: `${Math.max(6, share * 100)}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Occasions View ---------------- */
+
+function OccasionsView({ onAdd }: { onAdd: () => void }) {
+  const occasions = useBani((s) => s.occasions);
+  const expenses = useBani((s) => s.expenses);
+  const removeOccasion = useBani((s) => s.removeOccasion);
+
+  return (
+    <div className="animate-fade-soft space-y-4">
+      <SectionHeader title="Occasions" subtitle={`${occasions.length} group${occasions.length === 1 ? "" : "s"}`} action={{ label: "Add", onClick: onAdd }} />
+      {occasions.length === 0 ? (
+        <EmptyState
+          icon={<CalendarRange className="h-6 w-6" />}
+          title="No occasions yet"
+          desc="Create an occasion to group expenses."
+          cta="Create occasion"
+          onCta={onAdd}
+        />
+      ) : (
+        <ul className="space-y-3">
+          {occasions.map((o) => {
+            const occExp = expenses.filter((e) => e.occasionId === o.id);
+            const total = occExp.reduce((a, b) => a + b.amount, 0);
+            return (
+              <li key={o.id} className="glass p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4 className="truncate text-lg font-bold tracking-tight">{o.name}</h4>
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      {o.participantIds.length} people · {occExp.length} expense{occExp.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <button onClick={() => removeOccasion(o.id)} className="text-neutral-400 hover:text-rose-600" aria-label="Remove">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Total</p>
+                    <p className="text-2xl font-black tracking-tight">₹{total.toLocaleString("en-IN")}</p>
+                  </div>
+                  <div className="flex -space-x-2">
+                    {o.participantIds.slice(0, 4).map((pid) => {
+                      const name = useBani.getState().participants.find((p) => p.id === pid)?.name ?? "?";
+                      return (
+                        <div key={pid} className="ring-2 ring-white rounded-full">
+                          <Avatar name={name} />
+                        </div>
+                      );
+                    })}
+                    {o.participantIds.length > 4 && (
+                      <div className="grid h-9 w-9 place-items-center rounded-full bg-neutral-100 text-[11px] font-bold text-neutral-600 ring-2 ring-white">
+                        +{o.participantIds.length - 4}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Expenses View ---------------- */
+
+function ExpensesView({ nameOf, occasionName }: { nameOf: (id: string) => string; occasionName: (id: string) => string }) {
   const expenses = useBani((s) => s.expenses);
   const removeExpense = useBani((s) => s.removeExpense);
-  if (expenses.length === 0) {
-    return (
-      <div className="bani-card p-10 text-center text-sm text-muted-foreground">
-        No expenses yet. Tap the <span className="text-primary">+</span> button to add one.
-      </div>
-    );
-  }
   return (
-    <ul className="space-y-2">
-      {expenses.map((e) => (
-        <li key={e.id} className="bani-card p-4">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h4 className="truncate text-sm font-semibold sm:text-base">{e.description}</h4>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {e.splitMethod}
-                </span>
+    <div className="animate-fade-soft space-y-4">
+      <SectionHeader title="Expenses" subtitle={`${expenses.length} entr${expenses.length === 1 ? "y" : "ies"}`} />
+      {expenses.length === 0 ? (
+        <EmptyState
+          icon={<Receipt className="h-6 w-6" />}
+          title="No expenses yet"
+          desc="Tap the + button to add your first expense."
+        />
+      ) : (
+        <ul className="space-y-3">
+          {expenses.map((e) => (
+            <li key={e.id} className="glass p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="truncate text-base font-semibold tracking-tight">{e.description}</h4>
+                    <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+                      {e.splitMethod}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    <span className="font-semibold text-neutral-700">{nameOf(e.paidBy)}</span> paid · {occasionName(e.occasionId)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-neutral-400">{new Date(e.createdAt).toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-black tracking-tight">₹{e.amount.toLocaleString("en-IN")}</div>
+                  <button onClick={() => removeExpense(e.id)} className="mt-1 text-[11px] text-neutral-400 hover:text-rose-600">
+                    Remove
+                  </button>
+                </div>
               </div>
-              <p className="mt-1 truncate text-xs text-muted-foreground">
-                {nameOf(e.paidBy)} paid · {occasionName(e.occasionId)} · {new Date(e.createdAt).toLocaleString()}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {e.splits.map((s) => (
-                  <span key={s.participantId} className="rounded-md bg-muted/60 px-2 py-0.5 text-[11px]">
-                    {nameOf(s.participantId)}: ₹{s.value.toFixed(2)}
+                  <span key={s.participantId} className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-700">
+                    {nameOf(s.participantId)} · ₹{s.value.toFixed(2)}
                   </span>
                 ))}
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-base font-bold sm:text-lg">₹{e.amount.toLocaleString("en-IN")}</div>
-              <button
-                onClick={() => removeExpense(e.id)}
-                className="mt-1 text-[11px] text-muted-foreground hover:text-danger"
-              >
-                remove
-              </button>
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
-function BalancesView({ balances, nameOf }: { balances: Record<string, number>; nameOf: (id: string) => string }) {
+/* ---------------- Settle View ---------------- */
+
+function SettleView({ settlements, nameOf, balances }: { settlements: { from: string; to: string; amount: number }[]; nameOf: (id: string) => string; balances: Record<string, number> }) {
   const entries = Object.entries(balances).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) return <div className="bani-card p-10 text-center text-sm text-muted-foreground">No participants yet.</div>;
   return (
-    <ul className="space-y-2">
-      {entries.map(([id, bal]) => {
-        const positive = bal > 0.005;
-        const negative = bal < -0.005;
-        return (
-          <li key={id} className="bani-card flex items-center justify-between p-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/70 to-accent/70 text-sm font-bold text-primary-foreground">
-                {nameOf(id).slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate font-semibold">{nameOf(id)}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {positive ? "gets back" : negative ? "owes" : "all settled"}
+    <div className="animate-fade-soft space-y-5">
+      <SectionHeader title="Settle up" subtitle={settlements.length === 0 ? "Everyone is squared up" : `${settlements.length} payment${settlements.length === 1 ? "" : "s"} to clear all debts`} />
+
+      {/* Settlements */}
+      {settlements.length === 0 ? (
+        <EmptyState
+          icon={<Check className="h-6 w-6" />}
+          title="All settled 🎉"
+          desc="Nothing to pay. Everyone's even."
+        />
+      ) : (
+        <ul className="space-y-3">
+          {settlements.map((s, i) => (
+            <li key={i} className="glass-strong relative overflow-hidden p-5 animate-fade-soft" style={{ animationDelay: `${i * 70}ms` }}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Avatar name={nameOf(s.from)} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{nameOf(s.from)}</p>
+                    <p className="text-[11px] text-neutral-500">pays</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col items-center">
+                  <div className="rounded-full bg-emerald-500/10 px-3 py-1 text-base font-black tracking-tight text-emerald-700">
+                    ₹{s.amount.toFixed(2)}
+                  </div>
+                  <div className="mt-1 text-neutral-300">
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-3 text-right">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{nameOf(s.to)}</p>
+                    <p className="text-[11px] text-neutral-500">receives</p>
+                  </div>
+                  <Avatar name={nameOf(s.to)} />
                 </div>
               </div>
-            </div>
-            <div className={"text-lg font-extrabold " + (positive ? "text-emerald-400" : negative ? "text-rose-400" : "text-muted-foreground")}>
-              {positive && "+"}
-              ₹{Math.abs(bal).toFixed(2)}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Balances summary */}
+      {entries.length > 0 && (
+        <div className="glass p-5">
+          <h3 className="mb-3 text-[15px] font-semibold tracking-tight">All balances</h3>
+          <ul className="space-y-2.5">
+            {entries.map(([id, b]) => (
+              <BalanceRow key={id} name={nameOf(id)} balance={b} />
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
-function SettlementView({ settlements, nameOf }: { settlements: { from: string; to: string; amount: number }[]; nameOf: (id: string) => string }) {
-  if (settlements.length === 0) return <div className="bani-card p-10 text-center text-sm text-muted-foreground">Everyone is settled. 🎉</div>;
+/* ---------------- Section header / Empty ---------------- */
+
+function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: { label: string; onClick: () => void } }) {
   return (
-    <ul className="space-y-2">
-      {settlements.map((s, i) => (
-        <li key={i} className="bani-card flex items-center justify-between p-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-semibold">{nameOf(s.from)}</span>
-            <span className="text-muted-foreground">→</span>
-            <span className="font-semibold">{nameOf(s.to)}</span>
-          </div>
-          <div className="text-base font-extrabold text-emerald-400">₹{s.amount.toFixed(2)}</div>
-        </li>
-      ))}
-    </ul>
+    <div className="flex items-end justify-between">
+      <div>
+        <h2 className="text-[24px] font-black tracking-tight">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-neutral-500">{subtitle}</p>}
+      </div>
+      {action && (
+        <button onClick={action.onClick} className="bani-btn bani-btn-primary px-4 py-2 text-xs">
+          <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+          {action.label}
+        </button>
+      )}
+    </div>
   );
 }
 
-/* ---------------- Modals ---------------- */
+function EmptyState({ icon, title, desc, cta, onCta }: { icon: React.ReactNode; title: string; desc: string; cta?: string; onCta?: () => void }) {
+  return (
+    <div className="glass flex flex-col items-center px-6 py-12 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-neutral-100 text-neutral-700">
+        {icon}
+      </div>
+      <h3 className="mt-4 text-base font-semibold tracking-tight">{title}</h3>
+      <p className="mt-1 max-w-xs text-sm text-neutral-500">{desc}</p>
+      {cta && onCta && (
+        <button onClick={onCta} className="bani-btn bani-btn-primary mt-5">
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> {cta}
+        </button>
+      )}
+    </div>
+  );
+}
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+/* ============================================================
+   Bottom Sheets
+============================================================ */
+
+function BottomSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -506,26 +949,33 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     };
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-neutral-900/40 backdrop-blur-sm sm:items-center" onClick={onClose}>
       <div
-        className="bani-card max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-b-none rounded-t-2xl p-5 sm:rounded-2xl"
+        className="animate-sheet w-full max-w-lg overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:rounded-[28px]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold">{title}</h3>
-          <button onClick={onClose} className="text-xl text-muted-foreground hover:text-foreground">✕</button>
+        <div className="flex justify-center pt-2.5">
+          <div className="h-1.5 w-10 rounded-full bg-neutral-200" />
         </div>
-        {children}
+        <div className="flex items-center justify-between px-5 pb-3 pt-3">
+          <h3 className="text-lg font-bold tracking-tight">{title}</h3>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[78vh] overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
 
-function AddPersonModal({ onClose }: { onClose: () => void }) {
+function AddPersonSheet({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const addParticipant = useBani((s) => s.addParticipant);
   return (
-    <Modal title="Add a person" onClose={onClose}>
+    <BottomSheet title="Add a person" onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -537,20 +987,20 @@ function AddPersonModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <input autoFocus className="bani-input" placeholder="Name e.g. Priya" value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="bani-btn bani-btn-primary mt-4 w-full" type="submit">Add</button>
+        <button className="bani-btn bani-btn-primary mt-4 w-full" type="submit">Add person</button>
       </form>
-    </Modal>
+    </BottomSheet>
   );
 }
 
-function AddOccasionModal({ onClose }: { onClose: () => void }) {
+function AddOccasionSheet({ onClose }: { onClose: () => void }) {
   const participants = useBani((s) => s.participants);
   const addOccasion = useBani((s) => s.addOccasion);
   const [name, setName] = useState("");
   const [ids, setIds] = useState<string[]>(participants.map((p) => p.id));
   const toggle = (id: string) => setIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   return (
-    <Modal title="New occasion" onClose={onClose}>
+    <BottomSheet title="New occasion" onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -562,22 +1012,33 @@ function AddOccasionModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <input autoFocus className="bani-input" placeholder="e.g. Scuba Diving" value={name} onChange={(e) => setName(e.target.value)} />
-        <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Included participants</p>
+        <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Included participants</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {participants.map((p) => (
-            <label key={p.id} className={"flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm " + (ids.includes(p.id) ? "border-primary bg-primary/10" : "border-border bg-muted/40")}>
-              <input type="checkbox" checked={ids.includes(p.id)} onChange={() => toggle(p.id)} />
-              <span className="truncate">{p.name}</span>
+            <label
+              key={p.id}
+              className={
+                "flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm transition " +
+                (ids.includes(p.id)
+                  ? "border-neutral-900 bg-neutral-900 text-white"
+                  : "border-neutral-200 bg-white text-neutral-700")
+              }
+            >
+              <input type="checkbox" className="sr-only" checked={ids.includes(p.id)} onChange={() => toggle(p.id)} />
+              <span className={"grid h-4 w-4 place-items-center rounded-full border " + (ids.includes(p.id) ? "border-white bg-white text-neutral-900" : "border-neutral-300")}>
+                {ids.includes(p.id) && <Check className="h-3 w-3" strokeWidth={3} />}
+              </span>
+              <span className="truncate font-medium">{p.name}</span>
             </label>
           ))}
         </div>
-        <button className="bani-btn bani-btn-primary mt-5 w-full" type="submit">Create</button>
+        <button className="bani-btn bani-btn-primary mt-5 w-full" type="submit">Create occasion</button>
       </form>
-    </Modal>
+    </BottomSheet>
   );
 }
 
-function AddExpenseModal({ onClose }: { onClose: () => void }) {
+function AddExpenseSheet({ onClose }: { onClose: () => void }) {
   const { participants, occasions, addExpense } = useBani();
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<string>("");
@@ -605,7 +1066,7 @@ function AddExpenseModal({ onClose }: { onClose: () => void }) {
     setIncludedIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   return (
-    <Modal title="Add expense" onClose={onClose}>
+    <BottomSheet title="Add expense" onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -621,31 +1082,48 @@ function AddExpenseModal({ onClose }: { onClose: () => void }) {
         className="space-y-3"
       >
         <input className="bani-input" placeholder="Description e.g. Dinner" value={description} onChange={(e) => setDescription(e.target.value)} autoFocus />
+
+        {/* big amount */}
+        <div className="rounded-2xl bg-neutral-50 px-4 py-5 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Amount</p>
+          <div className="mt-1 flex items-baseline justify-center gap-1">
+            <span className="text-3xl font-black text-neutral-400">₹</span>
+            <input
+              inputMode="decimal"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-40 bg-transparent text-center text-4xl font-black tracking-tight outline-none placeholder:text-neutral-300"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
-          <input className="bani-input" inputMode="decimal" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <select className="bani-input" value={occasionId} onChange={(e) => setOccasionId(e.target.value)}>
-            {occasions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Occasion</p>
+            <select className="bani-input" value={occasionId} onChange={(e) => setOccasionId(e.target.value)}>
+              {occasions.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Paid by</p>
+            <select className="bani-input" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+              {occParticipants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
         </div>
 
         <div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Paid by</p>
-          <select className="bani-input" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
-            {occParticipants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-
-        <div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Split method</p>
-          <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-lg bg-muted/50 p-1">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Split method</p>
+          <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1">
             {(["equal", "unequal", "percentage", "shares", "adjustment"] as SplitMethod[]).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMethod(m)}
                 className={
-                  "whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold capitalize " +
-                  (method === m ? "bg-background text-foreground" : "text-muted-foreground")
+                  "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition " +
+                  (method === m ? "bg-white text-neutral-900 shadow" : "text-neutral-500")
                 }
               >
                 {m}
@@ -655,7 +1133,7 @@ function AddExpenseModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
             Included {method !== "equal" && `· enter ${method === "percentage" ? "%" : method === "shares" ? "shares" : method === "adjustment" ? "+/- adj" : "amounts"}`}
           </p>
           <div className="space-y-1.5">
@@ -663,21 +1141,22 @@ function AddExpenseModal({ onClose }: { onClose: () => void }) {
               const included = includedIds.includes(p.id);
               const share = splits.find((s) => s.participantId === p.id)?.value ?? 0;
               return (
-                <div key={p.id} className={"flex items-center gap-2 rounded-lg border px-3 py-2 text-sm " + (included ? "border-border bg-muted/50" : "border-border/40 bg-transparent opacity-60")}>
-                  <input type="checkbox" checked={included} onChange={() => toggleInclude(p.id)} />
-                  <span className="flex-1 truncate">{p.name}</span>
+                <div key={p.id} className={"flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition " + (included ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50/50 opacity-60")}>
+                  <input type="checkbox" className="h-4 w-4 accent-neutral-900" checked={included} onChange={() => toggleInclude(p.id)} />
+                  <Avatar name={p.name} />
+                  <span className="flex-1 truncate font-medium">{p.name}</span>
                   {method === "equal" ? (
-                    <span className="text-xs text-muted-foreground">₹{included ? share.toFixed(2) : "0.00"}</span>
+                    <span className="text-xs font-semibold text-neutral-600">₹{included ? share.toFixed(2) : "0.00"}</span>
                   ) : (
                     <div className="flex items-center gap-1.5">
                       <input
                         disabled={!included}
-                        className="bani-input !w-24 !py-1 !px-2 text-right text-xs"
+                        className="w-20 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-right text-xs font-semibold outline-none focus:border-neutral-400"
                         inputMode="decimal"
                         value={raw[p.id] ?? ""}
                         onChange={(e) => setRaw((r) => ({ ...r, [p.id]: Number(e.target.value) }))}
                       />
-                      {included && <span className="w-16 text-right text-[11px] text-muted-foreground">₹{share.toFixed(2)}</span>}
+                      {included && <span className="w-16 text-right text-[11px] font-semibold text-neutral-500">₹{share.toFixed(2)}</span>}
                     </div>
                   )}
                 </div>
@@ -686,17 +1165,17 @@ function AddExpenseModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {error && <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-300">{error}</p>}
+        {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{error}</p>}
 
-        <button type="submit" className="bani-btn bani-btn-primary w-full" disabled={!!error}>
+        <button type="submit" className="bani-btn bani-btn-primary sticky bottom-0 w-full" disabled={!!error}>
           Add expense
         </button>
       </form>
-    </Modal>
+    </BottomSheet>
   );
 }
 
-function SettlementModal({
+function SettlementSheet({
   settlements,
   nameOf,
   onClose,
@@ -706,27 +1185,53 @@ function SettlementModal({
   onClose: () => void;
 }) {
   return (
-    <Modal title="Simplified settlements" onClose={onClose}>
+    <BottomSheet title="Simplified settlements" onClose={onClose}>
       {settlements.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">Everyone is settled. 🎉</p>
+        <div className="py-10 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+            <Check className="h-6 w-6" />
+          </div>
+          <p className="mt-3 text-sm font-medium text-neutral-700">Everyone is settled 🎉</p>
+        </div>
       ) : (
         <>
-          <p className="mb-3 text-xs text-muted-foreground">The minimum number of payments to settle everyone:</p>
-          <ul className="space-y-2">
+          <p className="mb-3 text-xs text-neutral-500">
+            Minimum payments to settle everyone:
+          </p>
+          <ul className="space-y-3">
             {settlements.map((s, i) => (
-              <li key={i} className="flex items-center justify-between rounded-xl bg-muted/60 px-4 py-3">
-                <div className="text-sm">
-                  <span className="font-semibold">{nameOf(s.from)}</span>{" "}
-                  <span className="text-muted-foreground">pays</span>{" "}
-                  <span className="font-semibold">{nameOf(s.to)}</span>
+              <li
+                key={i}
+                className="animate-fade-soft rounded-2xl border border-neutral-200 bg-gradient-to-br from-white to-neutral-50 p-4"
+                style={{ animationDelay: `${i * 70}ms` }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={nameOf(s.from)} />
+                    <div>
+                      <p className="text-sm font-semibold">{nameOf(s.from)}</p>
+                      <p className="text-[11px] text-neutral-500">pays</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="rounded-full bg-neutral-900 px-3 py-1 text-sm font-black text-white">
+                      ₹{s.amount.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{nameOf(s.to)}</p>
+                      <p className="text-[11px] text-neutral-500">receives</p>
+                    </div>
+                    <Avatar name={nameOf(s.to)} />
+                  </div>
                 </div>
-                <div className="text-base font-extrabold text-emerald-400">₹{s.amount.toFixed(2)}</div>
               </li>
             ))}
           </ul>
         </>
       )}
-      <button onClick={onClose} className="bani-btn bani-btn-ghost mt-5 w-full">Close</button>
-    </Modal>
+      <button onClick={onClose} className="bani-btn bani-btn-ghost mt-5 w-full">Done</button>
+    </BottomSheet>
   );
 }
