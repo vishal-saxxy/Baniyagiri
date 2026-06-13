@@ -1193,10 +1193,12 @@ function SettlementSheet({
   settlements,
   nameOf,
   onClose,
+  onConfirm,
 }: {
   settlements: { from: string; to: string; amount: number }[];
   nameOf: (id: string) => string;
   onClose: () => void;
+  onConfirm: () => void;
 }) {
   return (
     <BottomSheet title="Simplified settlements" onClose={onClose}>
@@ -1245,7 +1247,260 @@ function SettlementSheet({
           </ul>
         </>
       )}
-      <button onClick={onClose} className="bani-btn bani-btn-ghost mt-5 w-full">Done</button>
+      <div className="mt-5 flex gap-2">
+        <button onClick={onClose} className="bani-btn bani-btn-ghost flex-1">Close</button>
+        {settlements.length > 0 && (
+          <button onClick={onConfirm} className="bani-btn bani-btn-primary flex-1">
+            <Check className="h-4 w-4" /> Mark as paid
+          </button>
+        )}
+      </div>
+    </BottomSheet>
+  );
+}
+
+/* ============================================================
+   Workspaces sheet
+============================================================ */
+
+function WorkspacesSheet({ onClose }: { onClose: () => void }) {
+  const workspaces = useBani((s) => s.workspaces);
+  const activeId = useBani((s) => s.activeWorkspaceId);
+  const switchWorkspace = useBani((s) => s.switchWorkspace);
+  const createWorkspace = useBani((s) => s.createWorkspace);
+  const renameWorkspace = useBani((s) => s.renameWorkspace);
+  const deleteWorkspace = useBani((s) => s.deleteWorkspace);
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  return (
+    <BottomSheet title="Your workspaces" onClose={onClose}>
+      <form
+        className="mb-4 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!newName.trim()) return toast.error("Name required");
+          createWorkspace(newName);
+          setNewName("");
+          toast.success("Workspace created");
+          onClose();
+        }}
+      >
+        <input
+          className="bani-input"
+          placeholder="New workspace name"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <button type="submit" className="bani-btn bani-btn-primary shrink-0">
+          <FolderPlus className="h-4 w-4" /> Create
+        </button>
+      </form>
+
+      <ul className="space-y-2">
+        {workspaces.map((w) => {
+          const isActive = w.id === activeId;
+          const isEditing = editingId === w.id;
+          return (
+            <li key={w.id} className={"rounded-2xl border p-3 " + (isActive ? "border-neutral-900 bg-neutral-50" : "border-neutral-200 bg-white")}>
+              <div className="flex items-center justify-between gap-2">
+                {isEditing ? (
+                  <input
+                    autoFocus
+                    className="bani-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        renameWorkspace(w.id, editName);
+                        setEditingId(null);
+                        toast.success("Renamed");
+                      }
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    onClick={() => { switchWorkspace(w.id); onClose(); }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <p className="truncate text-sm font-semibold">
+                      {w.name} {isActive && <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600">Active</span>}
+                    </p>
+                    <p className="truncate text-[11px] text-neutral-500">
+                      {w.participants.length} people · {w.expenses.length} expense{w.expenses.length === 1 ? "" : "s"}
+                    </p>
+                  </button>
+                )}
+                <div className="flex shrink-0 items-center gap-1">
+                  {isEditing ? (
+                    <button
+                      onClick={() => {
+                        renameWorkspace(w.id, editName);
+                        setEditingId(null);
+                        toast.success("Renamed");
+                      }}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-white"
+                      aria-label="Save"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingId(w.id); setEditName(w.name); }}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                      aria-label="Rename"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete "${w.name}" and all its data?`)) {
+                        deleteWorkspace(w.id);
+                        toast.success("Workspace deleted");
+                      }
+                    }}
+                    className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-rose-500 hover:bg-rose-50"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </BottomSheet>
+  );
+}
+
+/* ============================================================
+   Settings sheet
+============================================================ */
+
+function SettingsSheet({ onClose }: { onClose: () => void }) {
+  const username = useBani((s) => s.username);
+  const preferences = useBani((s) => s.preferences);
+  const setPreferences = useBani((s) => s.setPreferences);
+  const exportData = useBani((s) => s.exportData);
+  const importData = useBani((s) => s.importData);
+  const clearAllData = useBani((s) => s.clearAllData);
+  const clearSheet = useBani((s) => s.clearSheet);
+  const workspaces = useBani((s) => s.workspaces);
+  const settlementHistory = useBani((s) => s.settlementHistory);
+
+  const onExport = () => {
+    const json = exportData();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `baniyagiri-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Backup downloaded");
+  };
+
+  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const ok = importData(String(reader.result || ""));
+      if (ok) {
+        toast.success("Data imported");
+        onClose();
+      } else {
+        toast.error("Invalid backup file");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <BottomSheet title="Settings" onClose={onClose}>
+      <div className="space-y-5">
+        <div className="rounded-2xl bg-neutral-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Signed in as</p>
+          <p className="mt-1 text-base font-bold">{username || "Guest"}</p>
+          <p className="mt-2 text-[11px] text-neutral-500">
+            {workspaces.length} workspace{workspaces.length === 1 ? "" : "s"} · {settlementHistory.length} settlement{settlementHistory.length === 1 ? "" : "s"} on record
+          </p>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Currency symbol</p>
+          <input
+            className="bani-input"
+            value={preferences.currency}
+            maxLength={3}
+            onChange={(e) => setPreferences({ currency: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Data</p>
+          <div className="grid grid-cols-1 gap-2">
+            <button onClick={onExport} className="bani-btn bani-btn-ghost w-full justify-start">
+              <Download className="h-4 w-4" /> Export all data (JSON)
+            </button>
+            <label className="bani-btn bani-btn-ghost w-full cursor-pointer justify-start">
+              <Upload className="h-4 w-4" /> Import data (JSON)
+              <input type="file" accept="application/json" className="hidden" onChange={onImport} />
+            </label>
+            <button
+              onClick={() => {
+                if (confirm("Clear the current workspace? Everyone, occasions, and expenses will be erased.")) {
+                  clearSheet();
+                  toast.success("Workspace cleared");
+                  onClose();
+                }
+              }}
+              className="bani-btn bani-btn-ghost w-full justify-start text-amber-700"
+            >
+              <Trash2 className="h-4 w-4" /> Clear current workspace
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("Delete EVERYTHING — workspaces, settlement history, preferences? This cannot be undone.")) {
+                  clearAllData();
+                  toast.success("All data cleared");
+                  onClose();
+                }
+              }}
+              className="bani-btn bani-btn-ghost w-full justify-start text-rose-600"
+            >
+              <Trash2 className="h-4 w-4" /> Clear all data
+            </button>
+          </div>
+        </div>
+
+        {settlementHistory.length > 0 && (
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+              <History className="mr-1 inline h-3 w-3" /> Recent settlements
+            </p>
+            <ul className="max-h-48 space-y-1.5 overflow-y-auto">
+              {settlementHistory.slice(0, 12).map((s) => (
+                <li key={s.id} className="flex items-center justify-between rounded-xl bg-neutral-50 px-3 py-2 text-xs">
+                  <span className="truncate">
+                    <span className="font-semibold">{s.fromName}</span> → <span className="font-semibold">{s.toName}</span>
+                    <span className="ml-1 text-neutral-400">· {s.workspaceName}</span>
+                  </span>
+                  <span className="shrink-0 font-bold">{preferences.currency}{s.amount.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="text-center text-[11px] text-neutral-400">
+          Local-first · runs entirely in your browser. No backend, no tracking.
+        </p>
+      </div>
     </BottomSheet>
   );
 }
