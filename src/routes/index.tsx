@@ -238,12 +238,15 @@ function WorkspaceSetup() {
 type Tab = "home" | "people" | "occasions" | "expenses" | "settle";
 
 function Dashboard() {
-  const { workspaceName, participants, occasions, expenses, clearSheet } = useBani();
+  const { workspaceName, participants, occasions, expenses } = useBani();
+  const recordSettlements = useBani((s) => s.recordSettlements);
   const [tab, setTab] = useState<Tab>("home");
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddOccasion, setShowAddOccasion] = useState(false);
   const [showSettlement, setShowSettlement] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showWorkspaces, setShowWorkspaces] = useState(false);
 
   const balances = useMemo(
     () => computeBalances(participants.map((p) => p.id), expenses),
@@ -262,20 +265,22 @@ function Dashboard() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
             Workspace
           </p>
-          <h1 className="truncate text-[26px] font-black tracking-tight sm:text-[30px]">
-            {workspaceName}
-          </h1>
+          <button
+            onClick={() => setShowWorkspaces(true)}
+            className="group flex max-w-full items-center gap-1.5"
+          >
+            <h1 className="truncate text-[26px] font-black tracking-tight sm:text-[30px]">
+              {workspaceName}
+            </h1>
+            <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400 transition group-hover:text-neutral-900" />
+          </button>
         </div>
         <button
           className="bani-btn bani-btn-ghost shrink-0 px-3 py-2 text-xs"
-          onClick={() => {
-            if (confirm("Clear the entire sheet? Everything will be erased.")) {
-              clearSheet();
-              toast.success("Sheet cleared");
-            }
-          }}
+          onClick={() => setShowSettings(true)}
+          aria-label="Settings"
         >
-          Reset
+          <SettingsIcon className="h-4 w-4" />
         </button>
       </header>
 
@@ -346,8 +351,15 @@ function Dashboard() {
           settlements={settlements}
           nameOf={nameOf}
           onClose={() => setShowSettlement(false)}
+          onConfirm={() => {
+            recordSettlements(settlements);
+            toast.success("Settlements recorded");
+            setShowSettlement(false);
+          }}
         />
       )}
+      {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
+      {showWorkspaces && <WorkspacesSheet onClose={() => setShowWorkspaces(false)} />}
     </div>
   );
 }
