@@ -489,6 +489,15 @@ function HomeView({
         </div>
       )}
 
+      <AnalyticsWidget
+        expenses={expenses}
+        participants={participants}
+        occasions={occasions}
+        nameOf={nameOf}
+      />
+
+
+
       {/* Top balances */}
       {top.length > 0 && (
         <div className="glass p-5">
