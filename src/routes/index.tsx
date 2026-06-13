@@ -642,7 +642,110 @@ function FitnessRings({ size = 96, rings }: { size?: number; rings: { value: num
   );
 }
 
+/* ---------------- Analytics Widget ---------------- */
+
+function AnalyticsWidget({
+  expenses, participants, occasions, nameOf,
+}: {
+  expenses: { id: string; amount: number; createdAt: number; description: string; paidBy: string; occasionId: string }[];
+  participants: Participant[];
+  occasions: { id: string; name: string; participantIds: string[] }[];
+  nameOf: (id: string) => string;
+}) {
+  const workspaces = useBani((s) => s.workspaces);
+  const settlementHistory = useBani((s) => s.settlementHistory);
+  const currency = useBani((s) => s.preferences.currency);
+
+  if (expenses.length === 0) return null;
+
+  const largestExpense = expenses.reduce((a, b) => (b.amount > a.amount ? b : a), expenses[0]);
+  const largestSettlement = settlementHistory[0]
+    ? settlementHistory.reduce((a, b) => (b.amount > a.amount ? b : a), settlementHistory[0])
+    : null;
+
+  // Most active = paid most expenses
+  const counts: Record<string, number> = {};
+  for (const e of expenses) counts[e.paidBy] = (counts[e.paidBy] ?? 0) + 1;
+  const topPayerId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  // Spending by occasion
+  const byOcc: Record<string, number> = {};
+  for (const e of expenses) byOcc[e.occasionId] = (byOcc[e.occasionId] ?? 0) + e.amount;
+  const occTotal = Object.values(byOcc).reduce((a, b) => a + b, 0) || 1;
+  const occSorted = Object.entries(byOcc).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  const stats: { label: string; value: string }[] = [
+    { label: "Workspaces", value: String(workspaces.length) },
+    { label: "Participants", value: String(participants.length) },
+    { label: "Transactions", value: String(expenses.length) },
+    { label: "Settlements", value: String(settlementHistory.length) },
+  ];
+
+  return (
+    <div className="glass p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight">
+          <BarChart3 className="h-4 w-4 text-neutral-500" /> Analytics
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-2xl bg-neutral-50 p-3 text-center">
+            <p className="text-lg font-black tracking-tight">{s.value}</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="rounded-2xl bg-neutral-50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Largest expense</p>
+          <p className="mt-0.5 truncate text-sm font-bold">{largestExpense.description}</p>
+          <p className="text-xs text-neutral-500">{currency}{largestExpense.amount.toLocaleString("en-IN")} · {nameOf(largestExpense.paidBy)}</p>
+        </div>
+        <div className="rounded-2xl bg-neutral-50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Most active</p>
+          <p className="mt-0.5 truncate text-sm font-bold">{topPayerId ? nameOf(topPayerId) : "—"}</p>
+          <p className="text-xs text-neutral-500">{topPayerId ? `${counts[topPayerId]} expense${counts[topPayerId] === 1 ? "" : "s"} paid` : ""}</p>
+        </div>
+        {largestSettlement && (
+          <div className="rounded-2xl bg-neutral-50 p-3 sm:col-span-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Largest settlement</p>
+            <p className="mt-0.5 truncate text-sm font-bold">{largestSettlement.fromName} → {largestSettlement.toName}</p>
+            <p className="text-xs text-neutral-500">{currency}{largestSettlement.amount.toFixed(2)} · {largestSettlement.workspaceName}</p>
+          </div>
+        )}
+      </div>
+
+      {occSorted.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Spending by occasion</p>
+          <ul className="space-y-2">
+            {occSorted.map(([occId, amt]) => {
+              const occ = occasions.find((o) => o.id === occId);
+              const pct = (amt / occTotal) * 100;
+              return (
+                <li key={occId}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="truncate font-semibold">{occ?.name ?? "—"}</span>
+                    <span className="shrink-0 text-neutral-500">{currency}{amt.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                    <div className="h-full rounded-full bg-neutral-900" style={{ width: `${Math.max(4, pct)}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Sparkline ---------------- */
+
 
 function SparkLine({ values }: { values: number[] }) {
   const w = 320, h = 70, pad = 6;
