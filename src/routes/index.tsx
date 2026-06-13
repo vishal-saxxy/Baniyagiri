@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import {
   LayoutGrid, Users, CalendarRange, Receipt, ArrowRightLeft,
   Plus, X, Sparkles, ChevronRight, TrendingUp, Wallet, Check,
+  Settings as SettingsIcon, ChevronDown, Download, Upload,
+  Trash2, Edit3, FolderPlus, History, BarChart3,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: BaniApp });
@@ -18,9 +20,9 @@ export const Route = createFileRoute("/")({ component: BaniApp });
 function WarningPill() {
   return (
     <div className="pointer-events-none sticky top-0 z-40 flex justify-center px-3 pt-3">
-      <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50/85 px-3 py-1.5 text-[11px] font-medium text-amber-900 backdrop-blur-xl shadow-sm">
-        <span className="grid h-4 w-4 place-items-center rounded-full bg-amber-400/90 text-[9px] text-white">!</span>
-        Session-only — data clears when this tab closes
+      <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50/85 px-3 py-1.5 text-[11px] font-medium text-emerald-900 backdrop-blur-xl shadow-sm">
+        <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500/90 text-[9px] text-white">✓</span>
+        Local-first · saved on this device only
       </div>
     </div>
   );
@@ -236,12 +238,15 @@ function WorkspaceSetup() {
 type Tab = "home" | "people" | "occasions" | "expenses" | "settle";
 
 function Dashboard() {
-  const { workspaceName, participants, occasions, expenses, clearSheet } = useBani();
+  const { workspaceName, participants, occasions, expenses } = useBani();
+  const recordSettlements = useBani((s) => s.recordSettlements);
   const [tab, setTab] = useState<Tab>("home");
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddOccasion, setShowAddOccasion] = useState(false);
   const [showSettlement, setShowSettlement] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showWorkspaces, setShowWorkspaces] = useState(false);
 
   const balances = useMemo(
     () => computeBalances(participants.map((p) => p.id), expenses),
@@ -260,20 +265,22 @@ function Dashboard() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
             Workspace
           </p>
-          <h1 className="truncate text-[26px] font-black tracking-tight sm:text-[30px]">
-            {workspaceName}
-          </h1>
+          <button
+            onClick={() => setShowWorkspaces(true)}
+            className="group flex max-w-full items-center gap-1.5"
+          >
+            <h1 className="truncate text-[26px] font-black tracking-tight sm:text-[30px]">
+              {workspaceName}
+            </h1>
+            <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400 transition group-hover:text-neutral-900" />
+          </button>
         </div>
         <button
           className="bani-btn bani-btn-ghost shrink-0 px-3 py-2 text-xs"
-          onClick={() => {
-            if (confirm("Clear the entire sheet? Everything will be erased.")) {
-              clearSheet();
-              toast.success("Sheet cleared");
-            }
-          }}
+          onClick={() => setShowSettings(true)}
+          aria-label="Settings"
         >
-          Reset
+          <SettingsIcon className="h-4 w-4" />
         </button>
       </header>
 
@@ -344,8 +351,15 @@ function Dashboard() {
           settlements={settlements}
           nameOf={nameOf}
           onClose={() => setShowSettlement(false)}
+          onConfirm={() => {
+            recordSettlements(settlements);
+            toast.success("Settlements recorded");
+            setShowSettlement(false);
+          }}
         />
       )}
+      {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
+      {showWorkspaces && <WorkspacesSheet onClose={() => setShowWorkspaces(false)} />}
     </div>
   );
 }
@@ -474,6 +488,15 @@ function HomeView({
           </div>
         </div>
       )}
+
+      <AnalyticsWidget
+        expenses={expenses}
+        participants={participants}
+        occasions={occasions}
+        nameOf={nameOf}
+      />
+
+
 
       {/* Top balances */}
       {top.length > 0 && (
@@ -619,7 +642,110 @@ function FitnessRings({ size = 96, rings }: { size?: number; rings: { value: num
   );
 }
 
+/* ---------------- Analytics Widget ---------------- */
+
+function AnalyticsWidget({
+  expenses, participants, occasions, nameOf,
+}: {
+  expenses: { id: string; amount: number; createdAt: number; description: string; paidBy: string; occasionId: string }[];
+  participants: Participant[];
+  occasions: { id: string; name: string; participantIds: string[] }[];
+  nameOf: (id: string) => string;
+}) {
+  const workspaces = useBani((s) => s.workspaces);
+  const settlementHistory = useBani((s) => s.settlementHistory);
+  const currency = useBani((s) => s.preferences.currency);
+
+  if (expenses.length === 0) return null;
+
+  const largestExpense = expenses.reduce((a, b) => (b.amount > a.amount ? b : a), expenses[0]);
+  const largestSettlement = settlementHistory[0]
+    ? settlementHistory.reduce((a, b) => (b.amount > a.amount ? b : a), settlementHistory[0])
+    : null;
+
+  // Most active = paid most expenses
+  const counts: Record<string, number> = {};
+  for (const e of expenses) counts[e.paidBy] = (counts[e.paidBy] ?? 0) + 1;
+  const topPayerId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  // Spending by occasion
+  const byOcc: Record<string, number> = {};
+  for (const e of expenses) byOcc[e.occasionId] = (byOcc[e.occasionId] ?? 0) + e.amount;
+  const occTotal = Object.values(byOcc).reduce((a, b) => a + b, 0) || 1;
+  const occSorted = Object.entries(byOcc).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  const stats: { label: string; value: string }[] = [
+    { label: "Workspaces", value: String(workspaces.length) },
+    { label: "Participants", value: String(participants.length) },
+    { label: "Transactions", value: String(expenses.length) },
+    { label: "Settlements", value: String(settlementHistory.length) },
+  ];
+
+  return (
+    <div className="glass p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight">
+          <BarChart3 className="h-4 w-4 text-neutral-500" /> Analytics
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-2xl bg-neutral-50 p-3 text-center">
+            <p className="text-lg font-black tracking-tight">{s.value}</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="rounded-2xl bg-neutral-50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Largest expense</p>
+          <p className="mt-0.5 truncate text-sm font-bold">{largestExpense.description}</p>
+          <p className="text-xs text-neutral-500">{currency}{largestExpense.amount.toLocaleString("en-IN")} · {nameOf(largestExpense.paidBy)}</p>
+        </div>
+        <div className="rounded-2xl bg-neutral-50 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Most active</p>
+          <p className="mt-0.5 truncate text-sm font-bold">{topPayerId ? nameOf(topPayerId) : "—"}</p>
+          <p className="text-xs text-neutral-500">{topPayerId ? `${counts[topPayerId]} expense${counts[topPayerId] === 1 ? "" : "s"} paid` : ""}</p>
+        </div>
+        {largestSettlement && (
+          <div className="rounded-2xl bg-neutral-50 p-3 sm:col-span-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Largest settlement</p>
+            <p className="mt-0.5 truncate text-sm font-bold">{largestSettlement.fromName} → {largestSettlement.toName}</p>
+            <p className="text-xs text-neutral-500">{currency}{largestSettlement.amount.toFixed(2)} · {largestSettlement.workspaceName}</p>
+          </div>
+        )}
+      </div>
+
+      {occSorted.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Spending by occasion</p>
+          <ul className="space-y-2">
+            {occSorted.map(([occId, amt]) => {
+              const occ = occasions.find((o) => o.id === occId);
+              const pct = (amt / occTotal) * 100;
+              return (
+                <li key={occId}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="truncate font-semibold">{occ?.name ?? "—"}</span>
+                    <span className="shrink-0 text-neutral-500">{currency}{amt.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                    <div className="h-full rounded-full bg-neutral-900" style={{ width: `${Math.max(4, pct)}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Sparkline ---------------- */
+
 
 function SparkLine({ values }: { values: number[] }) {
   const w = 320, h = 70, pad = 6;
@@ -1179,10 +1305,12 @@ function SettlementSheet({
   settlements,
   nameOf,
   onClose,
+  onConfirm,
 }: {
   settlements: { from: string; to: string; amount: number }[];
   nameOf: (id: string) => string;
   onClose: () => void;
+  onConfirm: () => void;
 }) {
   return (
     <BottomSheet title="Simplified settlements" onClose={onClose}>
@@ -1231,7 +1359,260 @@ function SettlementSheet({
           </ul>
         </>
       )}
-      <button onClick={onClose} className="bani-btn bani-btn-ghost mt-5 w-full">Done</button>
+      <div className="mt-5 flex gap-2">
+        <button onClick={onClose} className="bani-btn bani-btn-ghost flex-1">Close</button>
+        {settlements.length > 0 && (
+          <button onClick={onConfirm} className="bani-btn bani-btn-primary flex-1">
+            <Check className="h-4 w-4" /> Mark as paid
+          </button>
+        )}
+      </div>
+    </BottomSheet>
+  );
+}
+
+/* ============================================================
+   Workspaces sheet
+============================================================ */
+
+function WorkspacesSheet({ onClose }: { onClose: () => void }) {
+  const workspaces = useBani((s) => s.workspaces);
+  const activeId = useBani((s) => s.activeWorkspaceId);
+  const switchWorkspace = useBani((s) => s.switchWorkspace);
+  const createWorkspace = useBani((s) => s.createWorkspace);
+  const renameWorkspace = useBani((s) => s.renameWorkspace);
+  const deleteWorkspace = useBani((s) => s.deleteWorkspace);
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+
+  return (
+    <BottomSheet title="Your workspaces" onClose={onClose}>
+      <form
+        className="mb-4 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!newName.trim()) return toast.error("Name required");
+          createWorkspace(newName);
+          setNewName("");
+          toast.success("Workspace created");
+          onClose();
+        }}
+      >
+        <input
+          className="bani-input"
+          placeholder="New workspace name"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <button type="submit" className="bani-btn bani-btn-primary shrink-0">
+          <FolderPlus className="h-4 w-4" /> Create
+        </button>
+      </form>
+
+      <ul className="space-y-2">
+        {workspaces.map((w) => {
+          const isActive = w.id === activeId;
+          const isEditing = editingId === w.id;
+          return (
+            <li key={w.id} className={"rounded-2xl border p-3 " + (isActive ? "border-neutral-900 bg-neutral-50" : "border-neutral-200 bg-white")}>
+              <div className="flex items-center justify-between gap-2">
+                {isEditing ? (
+                  <input
+                    autoFocus
+                    className="bani-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        renameWorkspace(w.id, editName);
+                        setEditingId(null);
+                        toast.success("Renamed");
+                      }
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    onClick={() => { switchWorkspace(w.id); onClose(); }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <p className="truncate text-sm font-semibold">
+                      {w.name} {isActive && <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600">Active</span>}
+                    </p>
+                    <p className="truncate text-[11px] text-neutral-500">
+                      {w.participants.length} people · {w.expenses.length} expense{w.expenses.length === 1 ? "" : "s"}
+                    </p>
+                  </button>
+                )}
+                <div className="flex shrink-0 items-center gap-1">
+                  {isEditing ? (
+                    <button
+                      onClick={() => {
+                        renameWorkspace(w.id, editName);
+                        setEditingId(null);
+                        toast.success("Renamed");
+                      }}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-neutral-900 text-white"
+                      aria-label="Save"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingId(w.id); setEditName(w.name); }}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                      aria-label="Rename"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete "${w.name}" and all its data?`)) {
+                        deleteWorkspace(w.id);
+                        toast.success("Workspace deleted");
+                      }
+                    }}
+                    className="grid h-8 w-8 place-items-center rounded-full bg-neutral-100 text-rose-500 hover:bg-rose-50"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </BottomSheet>
+  );
+}
+
+/* ============================================================
+   Settings sheet
+============================================================ */
+
+function SettingsSheet({ onClose }: { onClose: () => void }) {
+  const username = useBani((s) => s.username);
+  const preferences = useBani((s) => s.preferences);
+  const setPreferences = useBani((s) => s.setPreferences);
+  const exportData = useBani((s) => s.exportData);
+  const importData = useBani((s) => s.importData);
+  const clearAllData = useBani((s) => s.clearAllData);
+  const clearSheet = useBani((s) => s.clearSheet);
+  const workspaces = useBani((s) => s.workspaces);
+  const settlementHistory = useBani((s) => s.settlementHistory);
+
+  const onExport = () => {
+    const json = exportData();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `baniyagiri-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Backup downloaded");
+  };
+
+  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const ok = importData(String(reader.result || ""));
+      if (ok) {
+        toast.success("Data imported");
+        onClose();
+      } else {
+        toast.error("Invalid backup file");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <BottomSheet title="Settings" onClose={onClose}>
+      <div className="space-y-5">
+        <div className="rounded-2xl bg-neutral-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Signed in as</p>
+          <p className="mt-1 text-base font-bold">{username || "Guest"}</p>
+          <p className="mt-2 text-[11px] text-neutral-500">
+            {workspaces.length} workspace{workspaces.length === 1 ? "" : "s"} · {settlementHistory.length} settlement{settlementHistory.length === 1 ? "" : "s"} on record
+          </p>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Currency symbol</p>
+          <input
+            className="bani-input"
+            value={preferences.currency}
+            maxLength={3}
+            onChange={(e) => setPreferences({ currency: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">Data</p>
+          <div className="grid grid-cols-1 gap-2">
+            <button onClick={onExport} className="bani-btn bani-btn-ghost w-full justify-start">
+              <Download className="h-4 w-4" /> Export all data (JSON)
+            </button>
+            <label className="bani-btn bani-btn-ghost w-full cursor-pointer justify-start">
+              <Upload className="h-4 w-4" /> Import data (JSON)
+              <input type="file" accept="application/json" className="hidden" onChange={onImport} />
+            </label>
+            <button
+              onClick={() => {
+                if (confirm("Clear the current workspace? Everyone, occasions, and expenses will be erased.")) {
+                  clearSheet();
+                  toast.success("Workspace cleared");
+                  onClose();
+                }
+              }}
+              className="bani-btn bani-btn-ghost w-full justify-start text-amber-700"
+            >
+              <Trash2 className="h-4 w-4" /> Clear current workspace
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("Delete EVERYTHING — workspaces, settlement history, preferences? This cannot be undone.")) {
+                  clearAllData();
+                  toast.success("All data cleared");
+                  onClose();
+                }
+              }}
+              className="bani-btn bani-btn-ghost w-full justify-start text-rose-600"
+            >
+              <Trash2 className="h-4 w-4" /> Clear all data
+            </button>
+          </div>
+        </div>
+
+        {settlementHistory.length > 0 && (
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+              <History className="mr-1 inline h-3 w-3" /> Recent settlements
+            </p>
+            <ul className="max-h-48 space-y-1.5 overflow-y-auto">
+              {settlementHistory.slice(0, 12).map((s) => (
+                <li key={s.id} className="flex items-center justify-between rounded-xl bg-neutral-50 px-3 py-2 text-xs">
+                  <span className="truncate">
+                    <span className="font-semibold">{s.fromName}</span> → <span className="font-semibold">{s.toName}</span>
+                    <span className="ml-1 text-neutral-400">· {s.workspaceName}</span>
+                  </span>
+                  <span className="shrink-0 font-bold">{preferences.currency}{s.amount.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="text-center text-[11px] text-neutral-400">
+          Local-first · runs entirely in your browser. No backend, no tracking.
+        </p>
+      </div>
     </BottomSheet>
   );
 }
