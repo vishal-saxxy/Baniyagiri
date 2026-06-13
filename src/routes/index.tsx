@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import {
   LayoutGrid, Users, CalendarRange, Receipt, ArrowRightLeft,
   Plus, X, Sparkles, ChevronRight, TrendingUp, Wallet, Check,
+  Settings as SettingsIcon, ChevronDown, Download, Upload,
+  Trash2, Edit3, FolderPlus, History, BarChart3,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: BaniApp });
@@ -18,9 +20,9 @@ export const Route = createFileRoute("/")({ component: BaniApp });
 function WarningPill() {
   return (
     <div className="pointer-events-none sticky top-0 z-40 flex justify-center px-3 pt-3">
-      <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50/85 px-3 py-1.5 text-[11px] font-medium text-amber-900 backdrop-blur-xl shadow-sm">
-        <span className="grid h-4 w-4 place-items-center rounded-full bg-amber-400/90 text-[9px] text-white">!</span>
-        Session-only — data clears when this tab closes
+      <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-emerald-300/60 bg-emerald-50/85 px-3 py-1.5 text-[11px] font-medium text-emerald-900 backdrop-blur-xl shadow-sm">
+        <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500/90 text-[9px] text-white">✓</span>
+        Local-first · saved on this device only
       </div>
     </div>
   );
