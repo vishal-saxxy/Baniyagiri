@@ -888,7 +888,7 @@ function PeopleView({ participants, balances, decorate, onAdd }: { participants:
 
 /* ---------------- Occasions View ---------------- */
 
-function OccasionsView({ onAdd }: { onAdd: () => void }) {
+function OccasionsView({ decorate, onAdd }: { decorate: (name: string) => string; onAdd: () => void }) {
   const occasions = useBani((s) => s.occasions);
   const expenses = useBani((s) => s.expenses);
   const removeOccasion = useBani((s) => s.removeOccasion);
