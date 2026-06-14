@@ -1014,11 +1014,19 @@ function ExpensesView({ nameOf, occasionName, onEdit }: { nameOf: (id: string) =
 
 /* ---------------- Settle View ---------------- */
 
-function SettleView({ settlements, nameOf, balances }: { settlements: { from: string; to: string; amount: number }[]; nameOf: (id: string) => string; balances: Record<string, number> }) {
+function SettleView({ settlements, nameOf, balances, canSimplify, onSimplify }: { settlements: { from: string; to: string; amount: number }[]; nameOf: (id: string) => string; balances: Record<string, number>; canSimplify: boolean; onSimplify: () => void }) {
   const entries = Object.entries(balances).sort((a, b) => b[1] - a[1]);
   return (
     <div className="animate-fade-soft space-y-5">
       <SectionHeader title="Settle up" subtitle={settlements.length === 0 ? "Everyone is squared up" : `${settlements.length} payment${settlements.length === 1 ? "" : "s"} to clear all debts`} />
+
+      {canSimplify && (
+        <button onClick={onSimplify} className="bani-btn bani-btn-primary w-full">
+          <Sparkles className="h-4 w-4" /> Simplify debts
+        </button>
+      )}
+
+
 
       {/* Settlements */}
       {settlements.length === 0 ? (
