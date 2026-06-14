@@ -954,7 +954,7 @@ function OccasionsView({ decorate, onAdd }: { decorate: (name: string) => string
 
 /* ---------------- Expenses View ---------------- */
 
-function ExpensesView({ nameOf, occasionName }: { nameOf: (id: string) => string; occasionName: (id: string) => string }) {
+function ExpensesView({ nameOf, occasionName, onEdit }: { nameOf: (id: string) => string; occasionName: (id: string) => string; onEdit: (id: string) => void }) {
   const expenses = useBani((s) => s.expenses);
   const removeExpense = useBani((s) => s.removeExpense);
   return (
@@ -983,13 +983,20 @@ function ExpensesView({ nameOf, occasionName }: { nameOf: (id: string) => string
                   </p>
                   <p className="mt-0.5 text-[11px] text-neutral-400">{new Date(e.createdAt).toLocaleString()}</p>
                 </div>
-                <div className="text-right">
+                <div className="flex flex-col items-end">
                   <div className="text-xl font-black tracking-tight">₹{e.amount.toLocaleString("en-IN")}</div>
-                  <button onClick={() => removeExpense(e.id)} className="mt-1 text-[11px] text-neutral-400 hover:text-rose-600">
-                    Remove
-                  </button>
+                  <div className="mt-1 flex items-center gap-2">
+                    <button onClick={() => onEdit(e.id)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-600 hover:text-neutral-900">
+                      <Edit3 className="h-3 w-3" /> Edit
+                    </button>
+                    <span className="text-neutral-300">·</span>
+                    <button onClick={() => removeExpense(e.id)} className="text-[11px] text-neutral-400 hover:text-rose-600">
+                      Remove
+                    </button>
+                  </div>
                 </div>
               </div>
+
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {e.splits.map((s) => (
                   <span key={s.participantId} className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-700">
