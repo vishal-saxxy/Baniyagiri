@@ -71,7 +71,19 @@ interface State {
     splitMethod: SplitMethod;
     splits: SplitEntry[];
   }) => void;
+  updateExpense: (
+    id: string,
+    e: {
+      description: string;
+      amount: number;
+      paidBy: string;
+      occasionId: string;
+      splitMethod: SplitMethod;
+      splits: SplitEntry[];
+    },
+  ) => void;
   removeExpense: (id: string) => void;
+
   clearSheet: () => void;
 
   // settlements / demo
