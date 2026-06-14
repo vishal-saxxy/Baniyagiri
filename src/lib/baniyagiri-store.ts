@@ -71,7 +71,19 @@ interface State {
     splitMethod: SplitMethod;
     splits: SplitEntry[];
   }) => void;
+  updateExpense: (
+    id: string,
+    e: {
+      description: string;
+      amount: number;
+      paidBy: string;
+      occasionId: string;
+      splitMethod: SplitMethod;
+      splits: SplitEntry[];
+    },
+  ) => void;
   removeExpense: (id: string) => void;
+
   clearSheet: () => void;
 
   // settlements / demo
@@ -276,6 +288,15 @@ export const useBani = create<State>()(
               { id: uid(), createdAt: Date.now(), ...e },
               ...w.expenses,
             ],
+          })),
+        ),
+      updateExpense: (id, e) =>
+        set((s) =>
+          updateActive(s, (w) => ({
+            ...w,
+            expenses: w.expenses.map((x) =>
+              x.id === id ? { ...x, ...e } : x,
+            ),
           })),
         ),
       removeExpense: (id) =>

@@ -59,6 +59,7 @@ function BaniApp() {
   );
 }
 
+
 /* ============================================================
    Landing
 ============================================================ */
@@ -95,24 +96,15 @@ function Landing() {
           <Logo size={34} />
           <span className="text-[15px] font-bold tracking-tight">Baniyagiri</span>
         </div>
-        <a
-          href="#enter"
-          className="bani-btn bani-btn-ghost text-xs sm:text-sm"
-          onClick={(e) => {
-            e.preventDefault();
-            document.getElementById("enter")?.scrollIntoView({ behavior: "smooth" });
-          }}
-        >
-          Enter workspace
-        </a>
       </nav>
 
       {/* Hero */}
       <section className="mt-16 sm:mt-24 text-center">
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/60 px-3 py-1 text-[11px] font-medium text-neutral-600 backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          No signup · No backend · Browser-only
+          No signup · Browser-only
         </div>
+
         <h1 className="mx-auto mt-6 max-w-3xl text-5xl font-black tracking-tight sm:text-7xl leading-[0.95]">
           Baniyagiri
         </h1>
@@ -239,9 +231,11 @@ type Tab = "home" | "people" | "occasions" | "expenses" | "settle";
 
 function Dashboard() {
   const { workspaceName, participants, occasions, expenses } = useBani();
+  const username = useBani((s) => s.username);
   const recordSettlements = useBani((s) => s.recordSettlements);
   const [tab, setTab] = useState<Tab>("home");
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddOccasion, setShowAddOccasion] = useState(false);
   const [showSettlement, setShowSettlement] = useState(false);
@@ -253,9 +247,24 @@ function Dashboard() {
     [participants, expenses],
   );
   const settlements = useMemo(() => simplifyDebts(balances), [balances]);
-  const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? "—";
+  const isYou = (name: string) =>
+    !!username && name.trim().toLowerCase() === username.trim().toLowerCase();
+  const decorate = (name: string) => (isYou(name) ? `${name} (You)` : name);
+  const nameOf = (id: string) => {
+    const n = participants.find((p) => p.id === id)?.name ?? "—";
+    return decorate(n);
+  };
   const totalSpend = expenses.reduce((a, b) => a + b.amount, 0);
   const outstanding = Object.values(balances).reduce((a, b) => a + Math.max(0, b), 0);
+
+  const editingExpense = editingExpenseId
+    ? expenses.find((e) => e.id === editingExpenseId) ?? null
+    : null;
+
+  const openSimplify = () => {
+    if (participants.length < 2) return toast.error("Add at least 2 people");
+    setShowSettlement(true);
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-3 sm:px-6">
@@ -294,10 +303,8 @@ function Dashboard() {
             outstanding={outstanding}
             balances={balances}
             nameOf={nameOf}
-            onSimplify={() => {
-              if (participants.length < 2) return toast.error("Add at least 2 people");
-              setShowSettlement(true);
-            }}
+            decorate={decorate}
+            onSimplify={openSimplify}
             goTab={setTab}
           />
         )}
@@ -305,11 +312,13 @@ function Dashboard() {
           <PeopleView
             participants={participants}
             balances={balances}
+            decorate={decorate}
             onAdd={() => setShowAddPerson(true)}
           />
         )}
         {tab === "occasions" && (
           <OccasionsView
+            decorate={decorate}
             onAdd={() => {
               if (participants.length === 0) return toast.error("Add a person first");
               setShowAddOccasion(true);
@@ -320,12 +329,21 @@ function Dashboard() {
           <ExpensesView
             nameOf={nameOf}
             occasionName={(id) => occasions.find((o) => o.id === id)?.name ?? "—"}
+            onEdit={(id) => setEditingExpenseId(id)}
           />
         )}
         {tab === "settle" && (
-          <SettleView settlements={settlements} nameOf={nameOf} balances={balances} />
+          <SettleView
+            settlements={settlements}
+            nameOf={nameOf}
+            balances={balances}
+            canSimplify={participants.length >= 2 && settlements.length > 0}
+            onSimplify={openSimplify}
+          />
         )}
       </div>
+
+      <InlineFooter />
 
       {/* FAB */}
       <button
@@ -346,6 +364,12 @@ function Dashboard() {
       {showAddPerson && <AddPersonSheet onClose={() => setShowAddPerson(false)} />}
       {showAddOccasion && <AddOccasionSheet onClose={() => setShowAddOccasion(false)} />}
       {showAddExpense && <AddExpenseSheet onClose={() => setShowAddExpense(false)} />}
+      {editingExpense && (
+        <AddExpenseSheet
+          expense={editingExpense}
+          onClose={() => setEditingExpenseId(null)}
+        />
+      )}
       {showSettlement && (
         <SettlementSheet
           settlements={settlements}
@@ -363,6 +387,23 @@ function Dashboard() {
     </div>
   );
 }
+
+function InlineFooter() {
+  return (
+    <div className="mt-10 mb-2 text-center text-[12px] text-neutral-500">
+      Made with love by{" "}
+      <a
+        className="font-semibold text-neutral-900 underline-offset-4 hover:underline"
+        href="https://www.linkedin.com/in/vishal-kumar-gupta-b5a664252/"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Vishal
+      </a>
+    </div>
+  );
+}
+
 
 /* ---------------- Bottom Navigation ---------------- */
 
@@ -402,7 +443,7 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 
 function HomeView({
   participants, occasions, expenses, totalSpend, outstanding,
-  balances, nameOf, onSimplify, goTab,
+  balances, nameOf, decorate, onSimplify, goTab,
 }: {
   participants: Participant[];
   occasions: { id: string; name: string; participantIds: string[] }[];
@@ -411,9 +452,11 @@ function HomeView({
   outstanding: number;
   balances: Record<string, number>;
   nameOf: (id: string) => string;
+  decorate: (name: string) => string;
   onSimplify: () => void;
   goTab: (t: Tab) => void;
 }) {
+
   // ring values
   const settledPct = (() => {
     const totals = Object.values(balances).reduce((a, b) => a + Math.abs(b), 0);
@@ -508,7 +551,7 @@ function HomeView({
             </button>
           </div>
           <ul className="space-y-2">
-            {top.map(({ p, b }) => <BalanceRow key={p.id} name={p.name} balance={b} />)}
+            {top.map(({ p, b }) => <BalanceRow key={p.id} name={decorate(p.name)} balance={b} />)}
           </ul>
         </div>
       )}
@@ -781,7 +824,7 @@ function SparkLine({ values }: { values: number[] }) {
 
 /* ---------------- People View ---------------- */
 
-function PeopleView({ participants, balances, onAdd }: { participants: Participant[]; balances: Record<string, number>; onAdd: () => void }) {
+function PeopleView({ participants, balances, decorate, onAdd }: { participants: Participant[]; balances: Record<string, number>; decorate: (name: string) => string; onAdd: () => void }) {
   const totals = Object.values(balances).reduce((a, b) => a + Math.abs(b), 0);
   return (
     <div className="animate-fade-soft space-y-4">
@@ -813,7 +856,8 @@ function PeopleView({ participants, balances, onAdd }: { participants: Participa
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <h4 className="mt-4 text-lg font-bold tracking-tight">{p.name}</h4>
+                <h4 className="mt-4 text-lg font-bold tracking-tight">{decorate(p.name)}</h4>
+
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
                   {positive ? "Gets back" : negative ? "Owes" : "Settled"}
                 </p>
@@ -844,7 +888,7 @@ function PeopleView({ participants, balances, onAdd }: { participants: Participa
 
 /* ---------------- Occasions View ---------------- */
 
-function OccasionsView({ onAdd }: { onAdd: () => void }) {
+function OccasionsView({ decorate, onAdd }: { decorate: (name: string) => string; onAdd: () => void }) {
   const occasions = useBani((s) => s.occasions);
   const expenses = useBani((s) => s.expenses);
   const removeOccasion = useBani((s) => s.removeOccasion);
@@ -910,7 +954,7 @@ function OccasionsView({ onAdd }: { onAdd: () => void }) {
 
 /* ---------------- Expenses View ---------------- */
 
-function ExpensesView({ nameOf, occasionName }: { nameOf: (id: string) => string; occasionName: (id: string) => string }) {
+function ExpensesView({ nameOf, occasionName, onEdit }: { nameOf: (id: string) => string; occasionName: (id: string) => string; onEdit: (id: string) => void }) {
   const expenses = useBani((s) => s.expenses);
   const removeExpense = useBani((s) => s.removeExpense);
   return (
@@ -939,13 +983,20 @@ function ExpensesView({ nameOf, occasionName }: { nameOf: (id: string) => string
                   </p>
                   <p className="mt-0.5 text-[11px] text-neutral-400">{new Date(e.createdAt).toLocaleString()}</p>
                 </div>
-                <div className="text-right">
+                <div className="flex flex-col items-end">
                   <div className="text-xl font-black tracking-tight">₹{e.amount.toLocaleString("en-IN")}</div>
-                  <button onClick={() => removeExpense(e.id)} className="mt-1 text-[11px] text-neutral-400 hover:text-rose-600">
-                    Remove
-                  </button>
+                  <div className="mt-1 flex items-center gap-2">
+                    <button onClick={() => onEdit(e.id)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-600 hover:text-neutral-900">
+                      <Edit3 className="h-3 w-3" /> Edit
+                    </button>
+                    <span className="text-neutral-300">·</span>
+                    <button onClick={() => removeExpense(e.id)} className="text-[11px] text-neutral-400 hover:text-rose-600">
+                      Remove
+                    </button>
+                  </div>
                 </div>
               </div>
+
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {e.splits.map((s) => (
                   <span key={s.participantId} className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-700">
@@ -963,11 +1014,19 @@ function ExpensesView({ nameOf, occasionName }: { nameOf: (id: string) => string
 
 /* ---------------- Settle View ---------------- */
 
-function SettleView({ settlements, nameOf, balances }: { settlements: { from: string; to: string; amount: number }[]; nameOf: (id: string) => string; balances: Record<string, number> }) {
+function SettleView({ settlements, nameOf, balances, canSimplify, onSimplify }: { settlements: { from: string; to: string; amount: number }[]; nameOf: (id: string) => string; balances: Record<string, number>; canSimplify: boolean; onSimplify: () => void }) {
   const entries = Object.entries(balances).sort((a, b) => b[1] - a[1]);
   return (
     <div className="animate-fade-soft space-y-5">
       <SectionHeader title="Settle up" subtitle={settlements.length === 0 ? "Everyone is squared up" : `${settlements.length} payment${settlements.length === 1 ? "" : "s"} to clear all debts`} />
+
+      {canSimplify && (
+        <button onClick={onSimplify} className="bani-btn bani-btn-primary w-full">
+          <Sparkles className="h-4 w-4" /> Simplify debts
+        </button>
+      )}
+
+
 
       {/* Settlements */}
       {settlements.length === 0 ? (
@@ -1144,7 +1203,7 @@ function AddOccasionSheet({ onClose }: { onClose: () => void }) {
             <label
               key={p.id}
               className={
-                "flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm transition " +
+                "flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm transition select-none " +
                 (ids.includes(p.id)
                   ? "border-neutral-900 bg-neutral-900 text-white"
                   : "border-neutral-200 bg-white text-neutral-700")
@@ -1164,19 +1223,28 @@ function AddOccasionSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AddExpenseSheet({ onClose }: { onClose: () => void }) {
-  const { participants, occasions, addExpense } = useBani();
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState<string>("");
-  const [occasionId, setOccasionId] = useState(occasions[0]?.id ?? "");
+function AddExpenseSheet({ onClose, expense }: { onClose: () => void; expense?: import("@/lib/baniyagiri-types").Expense }) {
+  const { participants, occasions, addExpense, updateExpense } = useBani();
+  const isEdit = !!expense;
+  const [description, setDescription] = useState(expense?.description ?? "");
+  const [amount, setAmount] = useState<string>(expense ? String(expense.amount) : "");
+  const [occasionId, setOccasionId] = useState(expense?.occasionId ?? occasions[0]?.id ?? "");
   const occ = useMemo(() => occasions.find((o) => o.id === occasionId), [occasions, occasionId]);
   const occParticipants = occ ? participants.filter((p) => occ.participantIds.includes(p.id)) : [];
-  const [paidBy, setPaidBy] = useState(occParticipants[0]?.id ?? "");
-  const [includedIds, setIncludedIds] = useState<string[]>(occParticipants.map((p) => p.id));
-  const [method, setMethod] = useState<SplitMethod>("equal");
-  const [raw, setRaw] = useState<Record<string, number>>({});
+  const [paidBy, setPaidBy] = useState(expense?.paidBy ?? occParticipants[0]?.id ?? "");
+  const [includedIds, setIncludedIds] = useState<string[]>(
+    expense ? expense.splits.map((s) => s.participantId) : occParticipants.map((p) => p.id),
+  );
+  const [method, setMethod] = useState<SplitMethod>(expense?.splitMethod ?? "equal");
+  const [raw, setRaw] = useState<Record<string, number>>(() => {
+    if (!expense) return {};
+    const r: Record<string, number> = {};
+    for (const s of expense.splits) r[s.participantId] = s.value;
+    return r;
+  });
 
   useEffect(() => {
+    if (isEdit) return;
     const ids = occ ? occ.participantIds : [];
     setIncludedIds(ids);
     if (!ids.includes(paidBy)) setPaidBy(ids[0] ?? "");
@@ -1192,7 +1260,7 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
     setIncludedIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   return (
-    <BottomSheet title="Add expense" onClose={onClose}>
+    <BottomSheet title={isEdit ? "Edit expense" : "Add expense"} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -1201,8 +1269,14 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
           if (!occasionId) return toast.error("Pick an occasion");
           if (!paidBy) return toast.error("Pick who paid");
           if (error) return toast.error(error);
-          addExpense({ description, amount: amt, paidBy, occasionId, splitMethod: method, splits });
-          toast.success("Expense added");
+          const payload = { description, amount: amt, paidBy, occasionId, splitMethod: method, splits };
+          if (isEdit && expense) {
+            updateExpense(expense.id, payload);
+            toast.success("Expense updated");
+          } else {
+            addExpense(payload);
+            toast.success("Expense added");
+          }
           onClose();
         }}
         className="space-y-3"
@@ -1267,14 +1341,32 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
               const included = includedIds.includes(p.id);
               const share = splits.find((s) => s.participantId === p.id)?.value ?? 0;
               return (
-                <div key={p.id} className={"flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition " + (included ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50/50 opacity-60")}>
-                  <input type="checkbox" className="h-4 w-4 accent-neutral-900" checked={included} onChange={() => toggleInclude(p.id)} />
+                <div
+                  key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleInclude(p.id)}
+                  onKeyDown={(ev) => { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); toggleInclude(p.id); } }}
+                  className={
+                    "flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition select-none " +
+                    (included ? "border-neutral-900/80 bg-white" : "border-neutral-200 bg-neutral-50/60 opacity-70 hover:opacity-100")
+                  }
+                >
+                  <span
+                    className={
+                      "grid h-5 w-5 shrink-0 place-items-center rounded-md border transition " +
+                      (included ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white")
+                    }
+                    aria-hidden
+                  >
+                    {included && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  </span>
                   <Avatar name={p.name} />
                   <span className="flex-1 truncate font-medium">{p.name}</span>
                   {method === "equal" ? (
                     <span className="text-xs font-semibold text-neutral-600">₹{included ? share.toFixed(2) : "0.00"}</span>
                   ) : (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5" onClick={(ev) => ev.stopPropagation()}>
                       <input
                         disabled={!included}
                         className="w-20 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-right text-xs font-semibold outline-none focus:border-neutral-400"
@@ -1294,12 +1386,13 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
         {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{error}</p>}
 
         <button type="submit" className="bani-btn bani-btn-primary sticky bottom-0 w-full" disabled={!!error}>
-          Add expense
+          {isEdit ? "Save changes" : "Add expense"}
         </button>
       </form>
     </BottomSheet>
   );
 }
+
 
 function SettlementSheet({
   settlements,
