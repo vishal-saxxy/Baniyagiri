@@ -443,7 +443,7 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 
 function HomeView({
   participants, occasions, expenses, totalSpend, outstanding,
-  balances, nameOf, onSimplify, goTab,
+  balances, nameOf, decorate, onSimplify, goTab,
 }: {
   participants: Participant[];
   occasions: { id: string; name: string; participantIds: string[] }[];
@@ -452,9 +452,11 @@ function HomeView({
   outstanding: number;
   balances: Record<string, number>;
   nameOf: (id: string) => string;
+  decorate: (name: string) => string;
   onSimplify: () => void;
   goTab: (t: Tab) => void;
 }) {
+
   // ring values
   const settledPct = (() => {
     const totals = Object.values(balances).reduce((a, b) => a + Math.abs(b), 0);
