@@ -1203,7 +1203,7 @@ function AddOccasionSheet({ onClose }: { onClose: () => void }) {
             <label
               key={p.id}
               className={
-                "flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm transition " +
+                "flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 text-sm transition select-none " +
                 (ids.includes(p.id)
                   ? "border-neutral-900 bg-neutral-900 text-white"
                   : "border-neutral-200 bg-white text-neutral-700")
