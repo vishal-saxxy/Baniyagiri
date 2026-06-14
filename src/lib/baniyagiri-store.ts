@@ -290,6 +290,15 @@ export const useBani = create<State>()(
             ],
           })),
         ),
+      updateExpense: (id, e) =>
+        set((s) =>
+          updateActive(s, (w) => ({
+            ...w,
+            expenses: w.expenses.map((x) =>
+              x.id === id ? { ...x, ...e } : x,
+            ),
+          })),
+        ),
       removeExpense: (id) =>
         set((s) =>
           updateActive(s, (w) => ({
