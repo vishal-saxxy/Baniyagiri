@@ -54,7 +54,7 @@ function BaniApp() {
         {stage === "workspace-setup" && <WorkspaceSetup />}
         {stage === "dashboard" && <Dashboard />}
       </main>
-      {stage === "workspace-setup" && <Footer />}
+      {stage !== "dashboard" && <Footer />}
     </div>
   );
 }
