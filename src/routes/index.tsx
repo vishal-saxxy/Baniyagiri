@@ -1223,19 +1223,28 @@ function AddOccasionSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-function AddExpenseSheet({ onClose }: { onClose: () => void }) {
-  const { participants, occasions, addExpense } = useBani();
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState<string>("");
-  const [occasionId, setOccasionId] = useState(occasions[0]?.id ?? "");
+function AddExpenseSheet({ onClose, expense }: { onClose: () => void; expense?: import("@/lib/baniyagiri-types").Expense }) {
+  const { participants, occasions, addExpense, updateExpense } = useBani();
+  const isEdit = !!expense;
+  const [description, setDescription] = useState(expense?.description ?? "");
+  const [amount, setAmount] = useState<string>(expense ? String(expense.amount) : "");
+  const [occasionId, setOccasionId] = useState(expense?.occasionId ?? occasions[0]?.id ?? "");
   const occ = useMemo(() => occasions.find((o) => o.id === occasionId), [occasions, occasionId]);
   const occParticipants = occ ? participants.filter((p) => occ.participantIds.includes(p.id)) : [];
-  const [paidBy, setPaidBy] = useState(occParticipants[0]?.id ?? "");
-  const [includedIds, setIncludedIds] = useState<string[]>(occParticipants.map((p) => p.id));
-  const [method, setMethod] = useState<SplitMethod>("equal");
-  const [raw, setRaw] = useState<Record<string, number>>({});
+  const [paidBy, setPaidBy] = useState(expense?.paidBy ?? occParticipants[0]?.id ?? "");
+  const [includedIds, setIncludedIds] = useState<string[]>(
+    expense ? expense.splits.map((s) => s.participantId) : occParticipants.map((p) => p.id),
+  );
+  const [method, setMethod] = useState<SplitMethod>(expense?.splitMethod ?? "equal");
+  const [raw, setRaw] = useState<Record<string, number>>(() => {
+    if (!expense) return {};
+    const r: Record<string, number> = {};
+    for (const s of expense.splits) r[s.participantId] = s.value;
+    return r;
+  });
 
   useEffect(() => {
+    if (isEdit) return;
     const ids = occ ? occ.participantIds : [];
     setIncludedIds(ids);
     if (!ids.includes(paidBy)) setPaidBy(ids[0] ?? "");
@@ -1251,7 +1260,7 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
     setIncludedIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   return (
-    <BottomSheet title="Add expense" onClose={onClose}>
+    <BottomSheet title={isEdit ? "Edit expense" : "Add expense"} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -1260,8 +1269,14 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
           if (!occasionId) return toast.error("Pick an occasion");
           if (!paidBy) return toast.error("Pick who paid");
           if (error) return toast.error(error);
-          addExpense({ description, amount: amt, paidBy, occasionId, splitMethod: method, splits });
-          toast.success("Expense added");
+          const payload = { description, amount: amt, paidBy, occasionId, splitMethod: method, splits };
+          if (isEdit && expense) {
+            updateExpense(expense.id, payload);
+            toast.success("Expense updated");
+          } else {
+            addExpense(payload);
+            toast.success("Expense added");
+          }
           onClose();
         }}
         className="space-y-3"
@@ -1326,14 +1341,32 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
               const included = includedIds.includes(p.id);
               const share = splits.find((s) => s.participantId === p.id)?.value ?? 0;
               return (
-                <div key={p.id} className={"flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition " + (included ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50/50 opacity-60")}>
-                  <input type="checkbox" className="h-4 w-4 accent-neutral-900" checked={included} onChange={() => toggleInclude(p.id)} />
+                <div
+                  key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleInclude(p.id)}
+                  onKeyDown={(ev) => { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); toggleInclude(p.id); } }}
+                  className={
+                    "flex min-h-11 cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition select-none " +
+                    (included ? "border-neutral-900/80 bg-white" : "border-neutral-200 bg-neutral-50/60 opacity-70 hover:opacity-100")
+                  }
+                >
+                  <span
+                    className={
+                      "grid h-5 w-5 shrink-0 place-items-center rounded-md border transition " +
+                      (included ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white")
+                    }
+                    aria-hidden
+                  >
+                    {included && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  </span>
                   <Avatar name={p.name} />
                   <span className="flex-1 truncate font-medium">{p.name}</span>
                   {method === "equal" ? (
                     <span className="text-xs font-semibold text-neutral-600">₹{included ? share.toFixed(2) : "0.00"}</span>
                   ) : (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5" onClick={(ev) => ev.stopPropagation()}>
                       <input
                         disabled={!included}
                         className="w-20 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-right text-xs font-semibold outline-none focus:border-neutral-400"
@@ -1353,12 +1386,13 @@ function AddExpenseSheet({ onClose }: { onClose: () => void }) {
         {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{error}</p>}
 
         <button type="submit" className="bani-btn bani-btn-primary sticky bottom-0 w-full" disabled={!!error}>
-          Add expense
+          {isEdit ? "Save changes" : "Add expense"}
         </button>
       </form>
     </BottomSheet>
   );
 }
+
 
 function SettlementSheet({
   settlements,
