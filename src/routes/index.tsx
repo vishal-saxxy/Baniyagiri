@@ -824,7 +824,7 @@ function SparkLine({ values }: { values: number[] }) {
 
 /* ---------------- People View ---------------- */
 
-function PeopleView({ participants, balances, onAdd }: { participants: Participant[]; balances: Record<string, number>; onAdd: () => void }) {
+function PeopleView({ participants, balances, decorate, onAdd }: { participants: Participant[]; balances: Record<string, number>; decorate: (name: string) => string; onAdd: () => void }) {
   const totals = Object.values(balances).reduce((a, b) => a + Math.abs(b), 0);
   return (
     <div className="animate-fade-soft space-y-4">
