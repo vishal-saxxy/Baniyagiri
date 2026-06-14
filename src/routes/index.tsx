@@ -96,24 +96,15 @@ function Landing() {
           <Logo size={34} />
           <span className="text-[15px] font-bold tracking-tight">Baniyagiri</span>
         </div>
-        <a
-          href="#enter"
-          className="bani-btn bani-btn-ghost text-xs sm:text-sm"
-          onClick={(e) => {
-            e.preventDefault();
-            document.getElementById("enter")?.scrollIntoView({ behavior: "smooth" });
-          }}
-        >
-          Enter workspace
-        </a>
       </nav>
 
       {/* Hero */}
       <section className="mt-16 sm:mt-24 text-center">
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/60 px-3 py-1 text-[11px] font-medium text-neutral-600 backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          No signup · No backend · Browser-only
+          No signup · Browser-only
         </div>
+
         <h1 className="mx-auto mt-6 max-w-3xl text-5xl font-black tracking-tight sm:text-7xl leading-[0.95]">
           Baniyagiri
         </h1>
