@@ -551,7 +551,7 @@ function HomeView({
             </button>
           </div>
           <ul className="space-y-2">
-            {top.map(({ p, b }) => <BalanceRow key={p.id} name={p.name} balance={b} />)}
+            {top.map(({ p, b }) => <BalanceRow key={p.id} name={decorate(p.name)} balance={b} />)}
           </ul>
         </div>
       )}
