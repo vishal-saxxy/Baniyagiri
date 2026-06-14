@@ -856,7 +856,8 @@ function PeopleView({ participants, balances, decorate, onAdd }: { participants:
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <h4 className="mt-4 text-lg font-bold tracking-tight">{p.name}</h4>
+                <h4 className="mt-4 text-lg font-bold tracking-tight">{decorate(p.name)}</h4>
+
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
                   {positive ? "Gets back" : negative ? "Owes" : "Settled"}
                 </p>
