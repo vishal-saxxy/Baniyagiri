@@ -231,9 +231,11 @@ type Tab = "home" | "people" | "occasions" | "expenses" | "settle";
 
 function Dashboard() {
   const { workspaceName, participants, occasions, expenses } = useBani();
+  const username = useBani((s) => s.username);
   const recordSettlements = useBani((s) => s.recordSettlements);
   const [tab, setTab] = useState<Tab>("home");
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [showAddOccasion, setShowAddOccasion] = useState(false);
   const [showSettlement, setShowSettlement] = useState(false);
@@ -245,9 +247,24 @@ function Dashboard() {
     [participants, expenses],
   );
   const settlements = useMemo(() => simplifyDebts(balances), [balances]);
-  const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? "—";
+  const isYou = (name: string) =>
+    !!username && name.trim().toLowerCase() === username.trim().toLowerCase();
+  const decorate = (name: string) => (isYou(name) ? `${name} (You)` : name);
+  const nameOf = (id: string) => {
+    const n = participants.find((p) => p.id === id)?.name ?? "—";
+    return decorate(n);
+  };
   const totalSpend = expenses.reduce((a, b) => a + b.amount, 0);
   const outstanding = Object.values(balances).reduce((a, b) => a + Math.max(0, b), 0);
+
+  const editingExpense = editingExpenseId
+    ? expenses.find((e) => e.id === editingExpenseId) ?? null
+    : null;
+
+  const openSimplify = () => {
+    if (participants.length < 2) return toast.error("Add at least 2 people");
+    setShowSettlement(true);
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-3 sm:px-6">
@@ -286,10 +303,8 @@ function Dashboard() {
             outstanding={outstanding}
             balances={balances}
             nameOf={nameOf}
-            onSimplify={() => {
-              if (participants.length < 2) return toast.error("Add at least 2 people");
-              setShowSettlement(true);
-            }}
+            decorate={decorate}
+            onSimplify={openSimplify}
             goTab={setTab}
           />
         )}
@@ -297,11 +312,13 @@ function Dashboard() {
           <PeopleView
             participants={participants}
             balances={balances}
+            decorate={decorate}
             onAdd={() => setShowAddPerson(true)}
           />
         )}
         {tab === "occasions" && (
           <OccasionsView
+            decorate={decorate}
             onAdd={() => {
               if (participants.length === 0) return toast.error("Add a person first");
               setShowAddOccasion(true);
@@ -312,12 +329,21 @@ function Dashboard() {
           <ExpensesView
             nameOf={nameOf}
             occasionName={(id) => occasions.find((o) => o.id === id)?.name ?? "—"}
+            onEdit={(id) => setEditingExpenseId(id)}
           />
         )}
         {tab === "settle" && (
-          <SettleView settlements={settlements} nameOf={nameOf} balances={balances} />
+          <SettleView
+            settlements={settlements}
+            nameOf={nameOf}
+            balances={balances}
+            canSimplify={participants.length >= 2 && settlements.length > 0}
+            onSimplify={openSimplify}
+          />
         )}
       </div>
+
+      <InlineFooter />
 
       {/* FAB */}
       <button
@@ -338,6 +364,12 @@ function Dashboard() {
       {showAddPerson && <AddPersonSheet onClose={() => setShowAddPerson(false)} />}
       {showAddOccasion && <AddOccasionSheet onClose={() => setShowAddOccasion(false)} />}
       {showAddExpense && <AddExpenseSheet onClose={() => setShowAddExpense(false)} />}
+      {editingExpense && (
+        <AddExpenseSheet
+          expense={editingExpense}
+          onClose={() => setEditingExpenseId(null)}
+        />
+      )}
       {showSettlement && (
         <SettlementSheet
           settlements={settlements}
@@ -355,6 +387,23 @@ function Dashboard() {
     </div>
   );
 }
+
+function InlineFooter() {
+  return (
+    <div className="mt-10 mb-2 text-center text-[12px] text-neutral-500">
+      Made with love by{" "}
+      <a
+        className="font-semibold text-neutral-900 underline-offset-4 hover:underline"
+        href="https://www.linkedin.com/in/vishal-kumar-gupta-b5a664252/"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Vishal
+      </a>
+    </div>
+  );
+}
+
 
 /* ---------------- Bottom Navigation ---------------- */
 
